@@ -102,7 +102,8 @@ export const smritiApi = {
   },
 
   async getEpisodes(): Promise<RawEpisode[]> {
-    return request<RawEpisode[]>("/api/pending");
+    const res = await request<{ episodes: RawEpisode[] }>("/api/pending");
+    return res.episodes || [];
   },
 
   async encodeMemory(

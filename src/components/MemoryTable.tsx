@@ -121,12 +121,24 @@ export function MemoryTable({
             <tbody>
               {tableMemories.map((m: MemoryNode) => {
                 const isSelected = selectedNode && selectedNode.id === `mem:${m.id}`;
-                const formattedDate = new Date(m.created_at).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit"
-                });
+                let formattedDate = "—";
+                try {
+                  if (m.created_at) {
+                    // Replace space with T for ISO-8601 parsing compatibility in Safari/WebKit
+                    const dateStr = m.created_at.replace(" ", "T");
+                    const parsedDate = new Date(dateStr);
+                    if (!isNaN(parsedDate.getTime())) {
+                      formattedDate = parsedDate.toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      });
+                    }
+                  }
+                } catch (err) {
+                  console.error("Table date parse error:", err);
+                }
                 
                 return (
                   <tr 

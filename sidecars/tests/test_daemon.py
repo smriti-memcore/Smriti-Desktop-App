@@ -17,6 +17,7 @@ import sys
 import shutil
 import tempfile
 import unittest
+from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -235,7 +236,7 @@ class TestGetEndpoints(unittest.TestCase):
         mem.status.value = "active"
         mem.visibility.value = "shared"
         mem.reflection_level = 0
-        mem.creation_time = "2026-07-05T00:00:00"
+        mem.creation_time = datetime(2026, 7, 5, 0, 0, 0)
 
         # Mock a room
         room = MagicMock()
@@ -307,7 +308,7 @@ class TestGetEndpoints(unittest.TestCase):
         ep = MagicMock()
         ep.id = "ep-001"
         ep.content = "Test episode"
-        ep.timestamp = "2026-07-05T00:00:00"
+        ep.timestamp = datetime(2026, 7, 5, 0, 0, 0)
         ep.salience.composite = 0.5
         mock.episode_buffer.get_unconsolidated.return_value = [ep]
         mock_get.return_value = mock

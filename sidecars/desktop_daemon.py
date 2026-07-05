@@ -140,7 +140,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                             "status": mem.status.value if hasattr(mem.status, "value") else str(mem.status),
                             "visibility": mem.visibility.value if hasattr(mem.visibility, "value") else str(mem.visibility),
                             "reflection_level": getattr(mem, "reflection_level", 0),
-                            "created_at": str(getattr(mem, "creation_time", "")) or None,
+                            "created_at": mem.creation_time.isoformat() if getattr(mem, "creation_time", None) else None,
                         }
                     )
 
@@ -196,8 +196,8 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                         {
                             "id": ep.id,
                             "content": ep.content,
-                            "timestamp": str(ep.timestamp) if getattr(ep, "timestamp", None) else None,
-                            "created_at": str(ep.timestamp) if getattr(ep, "timestamp", None) else None,
+                            "timestamp": ep.timestamp.isoformat() if getattr(ep, "timestamp", None) else None,
+                            "created_at": ep.timestamp.isoformat() if getattr(ep, "timestamp", None) else None,
                             "salience": getattr(ep.salience, "composite", 0.0) if ep.salience else 0.0,
                         }
                     )

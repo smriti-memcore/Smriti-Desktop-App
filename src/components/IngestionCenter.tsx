@@ -157,10 +157,22 @@ export function IngestionCenter({
                 </div>
               ) : (
                 pendingEpisodes.map((ep) => {
-                  const epDate = new Date(ep.timestamp).toLocaleTimeString(undefined, {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  });
+                  let epDate = "—";
+                  try {
+                    if (ep.timestamp) {
+                      // Replace space with T for ISO-8601 parsing compatibility in Safari/WebKit
+                      const dateStr = ep.timestamp.replace(" ", "T");
+                      const parsedDate = new Date(dateStr);
+                      if (!isNaN(parsedDate.getTime())) {
+                        epDate = parsedDate.toLocaleTimeString(undefined, {
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        });
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Date parsing error:", err);
+                  }
                   return (
                     <div 
                       key={ep.id} 
