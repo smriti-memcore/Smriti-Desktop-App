@@ -32,3 +32,5 @@ sidecars/build/
 sidecars/dist/
 sidecars/*.spec
 sidecars/build_venv/
+__pycache__/
+*.pyc
