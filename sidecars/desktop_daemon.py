@@ -140,26 +140,30 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                             "status": mem.status.value if hasattr(mem.status, "value") else str(mem.status),
                             "visibility": mem.visibility.value if hasattr(mem.visibility, "value") else str(mem.visibility),
                             "reflection_level": getattr(mem, "reflection_level", 0),
-                            "created_at": str(mem.created_at) if mem.created_at else None,
+                            "created_at": str(getattr(mem, "creation_time", "")) or None,
                         }
                     )
 
                 edges = []
-                for edge in getattr(palace, "edges", []):
-                    edges.append(
-                        {
-                            "source": edge.source_id,
-                            "target": edge.target_id,
-                            "weight": round(edge.weight, 3),
-                        }
-                    )
+                for room_edges in getattr(palace, "_adj", {}).values():
+                    for edge in room_edges:
+                        edges.append(
+                            {
+                                "source": f"room:{edge.source_room_id}",
+                                "target": f"room:{edge.target_room_id}",
+                                "weight": round(edge.strength, 3),
+                                "relationship": getattr(edge, "relationship", ""),
+                            }
+                        )
 
                 rooms = []
                 for room in palace.rooms.values():
                     rooms.append(
                         {
                             "id": room.id,
-                            "name": room.name,
+                            "topic": getattr(room, "topic", ""),
+                            "name": getattr(room, "topic", ""),  # Keep for backward compatibility
+                            "visibility": room.visibility.value if hasattr(room.visibility, "value") else str(room.visibility),
                             "memory_count": len(room.memory_ids),
                         }
                     )
@@ -169,7 +173,13 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                     "total_rooms": len(palace.rooms),
                 }
 
-                payload = {"nodes": nodes, "edges": edges, "rooms": rooms, "stats": stats}
+                payload = {
+                    "memories": nodes,
+                    "nodes": nodes,
+                    "edges": edges,
+                    "rooms": rooms,
+                    "stats": stats
+                }
                 self._respond(200, "application/json", json.dumps(payload).encode())
 
             elif self.path == "/api/stats":
@@ -186,7 +196,9 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                         {
                             "id": ep.id,
                             "content": ep.content,
-                            "created_at": str(ep.created_at) if ep.created_at else None,
+                            "timestamp": str(ep.timestamp) if getattr(ep, "timestamp", None) else None,
+                            "created_at": str(ep.timestamp) if getattr(ep, "timestamp", None) else None,
+                            "salience": getattr(ep.salience, "composite", 0.0) if ep.salience else 0.0,
                         }
                     )
                 self._respond(200, "application/json", json.dumps({"episodes": episodes}).encode())
@@ -279,6 +291,24 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                 smriti.save()
                 self._respond(200, "application/json", b'{"status": "forgotten"}')
 
+            elif self.path == "/api/recall":
+                query = body.get("query", "").strip()
+                if not query:
+                    self._respond(400, "application/json", b'{"error": "query is required"}')
+                    return
+                memories = smriti.recall(query)
+                results = []
+                for m in memories:
+                    results.append(
+                        {
+                            "id": m.id,
+                            "content": m.content,
+                            "strength": round(m.strength, 3),
+                            "status": m.status.value if hasattr(m.status, "value") else str(m.status),
+                        }
+                    )
+                self._respond(200, "application/json", json.dumps(results).encode())
+
             else:
                 self._respond(404, "application/json", b'{"error": "Endpoint not found"}')
 
@@ -291,6 +321,8 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
 # ── Entry point ────────────────────────────────────────────────────────────
 def run_daemon(port: int = 7799):
     bootstrap_first_run()
+    # Enable immediate port reuse to prevent "Address already in use" errors during dev restarts
+    HTTPServer.allow_reuse_address = True
     server = HTTPServer(("127.0.0.1", port), DesktopDaemonHandler)
     logger.info(f"SMRITI Desktop Daemon running at http://127.0.0.1:{port}")
     try:

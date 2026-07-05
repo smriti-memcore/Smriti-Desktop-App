@@ -235,18 +235,26 @@ class TestGetEndpoints(unittest.TestCase):
         mem.status.value = "active"
         mem.visibility.value = "shared"
         mem.reflection_level = 0
-        mem.created_at = "2026-07-05T00:00:00"
+        mem.creation_time = "2026-07-05T00:00:00"
 
         # Mock a room
         room = MagicMock()
         room.id = "room-001"
-        room.name = "Test Room"
+        room.topic = "Test Room"
+        room.visibility.value = "shared"
         room.memory_ids = ["mem-001"]
 
         # Mock palace
         mock.palace.memories = {"mem-001": mem}
         mock.palace.rooms = {"room-001": room}
-        mock.palace.edges = []
+        
+        # Mock TypedEdge
+        edge = MagicMock()
+        edge.source_room_id = "room-001"
+        edge.target_room_id = "room-002"
+        edge.strength = 1.0
+        edge.relationship = "temporal"
+        mock.palace._adj = {"room-001": [edge]}
 
         return mock
 
@@ -269,12 +277,16 @@ class TestGetEndpoints(unittest.TestCase):
 
         self.assertEqual(handler._response_code, 200)
         body = handler._response_body
+        self.assertIn("memories", body)
         self.assertIn("nodes", body)
         self.assertIn("edges", body)
         self.assertIn("rooms", body)
         self.assertIn("stats", body)
-        self.assertEqual(len(body["nodes"]), 1)
-        self.assertEqual(body["nodes"][0]["id"], "mem-001")
+        self.assertEqual(len(body["memories"]), 1)
+        self.assertEqual(body["memories"][0]["id"], "mem-001")
+        self.assertEqual(len(body["edges"]), 1)
+        self.assertEqual(body["edges"][0]["source"], "room:room-001")
+        self.assertEqual(body["edges"][0]["target"], "room:room-002")
         self.assertEqual(body["stats"]["total_memories"], 1)
 
     @patch.object(daemon, "get_smriti")
@@ -295,7 +307,8 @@ class TestGetEndpoints(unittest.TestCase):
         ep = MagicMock()
         ep.id = "ep-001"
         ep.content = "Test episode"
-        ep.created_at = "2026-07-05T00:00:00"
+        ep.timestamp = "2026-07-05T00:00:00"
+        ep.salience.composite = 0.5
         mock.episode_buffer.get_unconsolidated.return_value = [ep]
         mock_get.return_value = mock
 
@@ -305,6 +318,9 @@ class TestGetEndpoints(unittest.TestCase):
         self.assertEqual(handler._response_code, 200)
         self.assertIn("episodes", handler._response_body)
         self.assertEqual(len(handler._response_body["episodes"]), 1)
+        res_ep = handler._response_body["episodes"][0]
+        self.assertIn("timestamp", res_ep)
+        self.assertIn("salience", res_ep)
 
     def test_unknown_get_returns_404(self):
         handler = make_handler("GET", "/api/nonexistent")
@@ -421,6 +437,35 @@ class TestPostEndpoints(unittest.TestCase):
         self.assertEqual(handler._response_body["status"], "forgotten")
         mock.forget.assert_called_once_with("mem-001")
         mock.save.assert_called_once()
+
+    @patch.object(daemon, "get_smriti")
+    def test_recall_requires_query(self, mock_get):
+        mock_get.return_value = MagicMock()
+        handler = make_handler("POST", "/api/recall", {})
+        handler.do_POST()
+        self.assertEqual(handler._response_code, 400)
+
+    @patch.object(daemon, "get_smriti")
+    def test_recall_returns_matched_memories(self, mock_get):
+        mock = MagicMock()
+        m = MagicMock()
+        m.id = "m1"
+        m.content = "found content"
+        m.strength = 1.5
+        m.status.value = "active"
+        mock.recall.return_value = [m]
+        mock_get.return_value = mock
+
+        handler = make_handler("POST", "/api/recall", {"query": "find me"})
+        handler.do_POST()
+
+        self.assertEqual(handler._response_code, 200)
+        body = handler._response_body
+        self.assertEqual(len(body), 1)
+        self.assertEqual(body[0]["id"], "m1")
+        self.assertEqual(body[0]["content"], "found content")
+        self.assertEqual(body[0]["strength"], 1.5)
+        mock.recall.assert_called_once_with("find me")
 
     def test_unknown_post_returns_404(self):
         handler = make_handler("POST", "/api/nonexistent", {})
