@@ -102,7 +102,7 @@ export const smritiApi = {
   },
 
   async getEpisodes(): Promise<RawEpisode[]> {
-    return request<RawEpisode[]>("/api/episodes");
+    return request<RawEpisode[]>("/api/pending");
   },
 
   async encodeMemory(
@@ -112,7 +112,11 @@ export const smritiApi = {
   ): Promise<{ status: string; id: string }> {
     return request<{ status: string; id: string }>("/api/encode", {
       method: "POST",
-      body: JSON.stringify({ content, context, private: isPrivate }),
+      body: JSON.stringify({
+        content,
+        context,
+        visibility: isPrivate ? "private" : "shared",
+      }),
     });
   },
 

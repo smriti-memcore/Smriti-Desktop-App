@@ -34,7 +34,7 @@ export function IngestionCenter({
     addLog(`Ingesting memory (private=${isPrivate})...`, "info");
     try {
       const res = await smritiApi.encodeMemory(newMemory, newContext, isPrivate);
-      if (res.status === "success") {
+      if (res.status === "encoded") {
         addLog(`Ingestion successful. Memory ID: ${res.id}`, "info");
         setNewMemory("");
         setNewContext("");
