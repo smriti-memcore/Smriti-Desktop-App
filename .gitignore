@@ -31,3 +31,4 @@ src-tauri/sidecars/
 sidecars/build/
 sidecars/dist/
 sidecars/*.spec
+sidecars/build_venv/
