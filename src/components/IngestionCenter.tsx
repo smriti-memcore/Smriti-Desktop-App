@@ -1,0 +1,255 @@
+import React, { useState } from "react";
+import { smritiApi, RawEpisode } from "../api";
+
+interface IngestionCenterProps {
+  daemonOnline: boolean;
+  logs: Array<{ time: string; text: string; type: string }>;
+  pendingEpisodes: RawEpisode[];
+  onIngestSuccess: () => Promise<void>;
+  onConsolidateSuccess: () => Promise<void>;
+  addLog: (text: string, type?: "info" | "consolidation") => void;
+}
+
+export function IngestionCenter({
+  daemonOnline,
+  logs,
+  pendingEpisodes,
+  onIngestSuccess,
+  onConsolidateSuccess,
+  addLog,
+}: IngestionCenterProps) {
+  // Ingest Form State (Scoped locally)
+  const [newMemory, setNewMemory] = useState("");
+  const [newContext, setNewContext] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [isIngesting, setIsIngesting] = useState(false);
+  const [isConsolidating, setIsConsolidating] = useState(false);
+  const [logsExpanded, setLogsExpanded] = useState(false);
+
+  const handleIngest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMemory.trim()) return;
+
+    setIsIngesting(true);
+    addLog(`Ingesting memory (private=${isPrivate})...`, "info");
+    try {
+      const res = await smritiApi.encodeMemory(newMemory, newContext, isPrivate);
+      if (res.status === "success") {
+        addLog(`Ingestion successful. Memory ID: ${res.id}`, "info");
+        setNewMemory("");
+        setNewContext("");
+        await onIngestSuccess();
+      }
+    } catch (err: any) {
+      addLog(`Ingestion failed: ${err.message}`, "info");
+    } finally {
+      setIsIngesting(false);
+    }
+  };
+
+  const handleConsolidate = async () => {
+    setIsConsolidating(true);
+    addLog("Consolidation triggered (System 2 background processes)...", "consolidation");
+    try {
+      const res = await smritiApi.consolidate();
+      addLog(`Consolidation finished. Results: ${res.stats}`, "consolidation");
+      await onConsolidateSuccess();
+    } catch (err: any) {
+      addLog(`Consolidation failed: ${err.message}`, "consolidation");
+    } finally {
+      setIsConsolidating(false);
+    }
+  };
+
+  return (
+    <div className="pane logs-pane" style={{ background: "transparent", border: "none", padding: 0 }}>
+      <div className="ingest-grid">
+        {/* Left Column: Ingest Form */}
+        <div className="ingest-col">
+          <section className="log-input-box" style={{ height: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="log-input-header">
+              <h3 style={{ fontSize: "14px", fontWeight: "700", borderBottom: "1px solid var(--border)", paddingBottom: "10px", width: "100%", textTransform: "uppercase", color: "var(--accent)", letterSpacing: "0.5px" }}>
+                Ingest Raw Observation
+              </h3>
+            </div>
+            <form onSubmit={handleIngest} style={{ display: "flex", flexDirection: "column", gap: "16px", flex: 1 }}>
+              <div className="form-group" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "#cbd5e1" }}>Observation Content</label>
+                <textarea
+                  value={newMemory}
+                  onChange={(e) => setNewMemory(e.target.value)}
+                  placeholder="Type what SMRITI should remember (e.g. key technical decisions, milestones, structural configurations)..."
+                  className="ingest-textarea"
+                  disabled={!daemonOnline}
+                  required
+                  style={{ flex: 1, marginTop: "6px" }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label style={{ fontSize: "12px", fontWeight: "600", color: "#cbd5e1" }}>Category Context (Optional)</label>
+                <input 
+                  type="text" 
+                  value={newContext} 
+                  onChange={(e) => setNewContext(e.target.value)}
+                  placeholder="Category topic or context namespace..."
+                  disabled={!daemonOnline}
+                  style={{ marginTop: "6px" }}
+                />
+              </div>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                <label className="switch-label">
+                  <input 
+                    type="checkbox" 
+                    checked={isPrivate} 
+                    onChange={(e) => setIsPrivate(e.target.checked)} 
+                  />
+                  <div className="switch-toggle"></div>
+                  <span>Private Room</span>
+                </label>
+                
+                <button 
+                  type="submit" 
+                  className="btn-primary" 
+                  disabled={isIngesting || !daemonOnline}
+                  style={{ padding: "10px 24px", flex: "none" }}
+                >
+                  {isIngesting ? "Ingesting..." : "Remember"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        {/* Right Column: Pending Queue & Operations logs */}
+        <div className="ingest-col">
+          {/* Pending Consolidation Queue Panel */}
+          <section className="pending-queue">
+            <div className="queue-header">
+              <div>
+                <h3>Pending Queue ({pendingEpisodes.length})</h3>
+                <span style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px", display: "block" }}>
+                  System 1 raw episodes awaiting System 2 reflection
+                </span>
+              </div>
+              <button 
+                className="btn-primary"
+                onClick={handleConsolidate}
+                disabled={isConsolidating || !daemonOnline || pendingEpisodes.length === 0}
+                style={{ 
+                  padding: "6px 14px", 
+                  fontSize: "11px", 
+                  flex: "none",
+                  background: pendingEpisodes.length > 0 ? "var(--accent-gradient)" : "rgba(255, 255, 255, 0.03)",
+                  border: pendingEpisodes.length > 0 ? "none" : "1px solid var(--border)",
+                  color: pendingEpisodes.length > 0 ? "#fff" : "var(--text-muted)"
+                }}
+              >
+                {isConsolidating ? "Consolidating..." : "Consolidate Queue"}
+              </button>
+            </div>
+            
+            <div className="queue-list">
+              {pendingEpisodes.length === 0 ? (
+                <div className="empty-state" style={{ padding: "30px 10px", textAlign: "center" }}>
+                  🧪 Pending queue is empty.<br />All observations have been consolidated.
+                </div>
+              ) : (
+                pendingEpisodes.map((ep) => {
+                  const epDate = new Date(ep.timestamp).toLocaleTimeString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  });
+                  return (
+                    <div 
+                      key={ep.id} 
+                      className="queue-item"
+                      style={{ 
+                        display: "flex", 
+                        justifyContent: "space-between", 
+                        alignItems: "center", 
+                        gap: "12px",
+                        padding: "8px 12px"
+                      }}
+                    >
+                      <span 
+                        style={{ 
+                          textOverflow: "ellipsis", 
+                          overflow: "hidden", 
+                          whiteSpace: "nowrap", 
+                          flex: 1,
+                          fontSize: "12px",
+                          color: "#cbd5e1"
+                        }}
+                        title={ep.content}
+                      >
+                        {ep.content}
+                      </span>
+                      <div 
+                        style={{ 
+                          display: "flex", 
+                          gap: "6px", 
+                          fontSize: "9px", 
+                          color: "var(--text-muted)", 
+                          flexShrink: 0,
+                          alignItems: "center"
+                        }}
+                      >
+                        <span style={{ background: "rgba(255, 255, 255, 0.04)", padding: "2px 4px", borderRadius: "3px" }}>
+                          {ep.id.substring(0, 6)}
+                        </span>
+                        <span>{epDate}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          {/* Logs Stream Panel */}
+          <section className="logs-display" style={{ display: "flex", flexDirection: "column" }}>
+            <div 
+              className="sidebar-header" 
+              onClick={() => setLogsExpanded(!logsExpanded)}
+              style={{ 
+                cursor: "pointer", 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                userSelect: "none"
+              }}
+            >
+              <span>System Operations Log ({logs.length})</span>
+              <span style={{ 
+                fontSize: "12px", 
+                color: "var(--accent)", 
+                transition: "transform 0.2s", 
+                transform: logsExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                marginRight: "4px"
+              }}>
+                ▶
+              </span>
+            </div>
+            
+            {logsExpanded && (
+              <div className="logs-stream" style={{ marginTop: "12px" }}>
+                {logs.length === 0 ? (
+                  <div className="empty-state">No operations registered. Ingest a memory to start logs.</div>
+                ) : (
+                  logs.map((log, idx) => (
+                    <div key={idx} className={`log-entry ${log.type}`}>
+                      <span className="log-timestamp">[{log.time}]</span>
+                      <span className="log-text">{log.text}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
