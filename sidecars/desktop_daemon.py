@@ -3,6 +3,8 @@ import sys
 import json
 import logging
 import traceback
+import threading
+import time
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -318,11 +320,30 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
             self._respond(500, "application/json", json.dumps({"error": str(e)}).encode())
 
 
+def monitor_parent():
+    """Periodically checks if the parent Tauri process has died.
+    In Unix/macOS, when a parent dies, the child process is adopted by init (PID 1).
+    """
+    initial_ppid = os.getppid()
+    if initial_ppid == 1:
+        return  # detached start
+    while True:
+        time.sleep(1)
+        if os.getppid() == 1:
+            logger.info("Parent Tauri process terminated. Exiting sidecar to release port...")
+            os._exit(0)
+
+
 # ── Entry point ────────────────────────────────────────────────────────────
 def run_daemon(port: int = 7799):
     bootstrap_first_run()
     # Enable immediate port reuse to prevent "Address already in use" errors during dev restarts
     HTTPServer.allow_reuse_address = True
+    
+    # Start parent process liveness monitor thread
+    monitor_thread = threading.Thread(target=monitor_parent, daemon=True)
+    monitor_thread.start()
+
     server = HTTPServer(("127.0.0.1", port), DesktopDaemonHandler)
     logger.info(f"SMRITI Desktop Daemon running at http://127.0.0.1:{port}")
     try:
