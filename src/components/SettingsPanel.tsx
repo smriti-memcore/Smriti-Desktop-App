@@ -15,12 +15,12 @@ export function SettingsPanel({
   daemonOnline,
 }: SettingsPanelProps) {
   return (
-    <div className="pane">
+    <div className="pane" style={{ padding: "0 20px" }}>
       <form className="settings-pane" onSubmit={handleSaveSettings}>
         <div className="settings-body">
           {/* Storage Configuration */}
           <section className="settings-section">
-            <h3>Storage Configuration</h3>
+            <h3>📂 Storage Configuration</h3>
             
             <div className="form-group">
               <label>Storage Mode</label>
@@ -31,6 +31,9 @@ export function SettingsPanel({
                 <option value="local">Local-Only (Save on laptop)</option>
                 <option value="cloud">Cloud Sync (Secure cloud palacing)</option>
               </select>
+              <span className="form-hint">
+                Choose whether to keep memory indexes completely offline on this computer or synchronize with a secure remote server.
+              </span>
             </div>
             
             {config.storage_mode === "cloud" && (
@@ -43,6 +46,7 @@ export function SettingsPanel({
                     value={config.cloud_endpoint || ""}
                     onChange={(e) => setConfig({ ...config, cloud_endpoint: e.target.value })}
                   />
+                  <span className="form-hint">Secure API endpoint URL for cloud sync synchronization.</span>
                 </div>
                 <div className="form-group">
                   <label>Cloud Access Token</label>
@@ -52,6 +56,7 @@ export function SettingsPanel({
                     value={config.cloud_token || ""}
                     onChange={(e) => setConfig({ ...config, cloud_token: e.target.value })}
                   />
+                  <span className="form-hint">Authentication token used to sync memory logs securely.</span>
                 </div>
               </>
             )}
@@ -63,12 +68,15 @@ export function SettingsPanel({
                 value={config.storage_path}
                 onChange={(e) => setConfig({ ...config, storage_path: e.target.value })}
               />
+              <span className="form-hint">
+                Local directory path on your machine where episodes, vectors, and category databases are persisted.
+              </span>
             </div>
           </section>
 
           {/* Reasoning Model Configuration */}
           <section className="settings-section">
-            <h3>Reasoning Model (System 2)</h3>
+            <h3>🧠 Reasoning Model (System 2)</h3>
             
             <div className="form-group">
               <label>LLM Provider</label>
@@ -81,6 +89,9 @@ export function SettingsPanel({
                 <option value="anthropic">Anthropic Claude API (Cloud)</option>
                 <option value="gemini">Google Gemini API (Cloud)</option>
               </select>
+              <span className="form-hint">
+                Language model engine utilized by SMRITI System 2 to consolidate raw events, structure thematic rooms, and reflect on insights.
+              </span>
             </div>
             
             {config.llm_provider === "ollama" && (
@@ -92,6 +103,7 @@ export function SettingsPanel({
                     value={config.ollama_base_url || ""}
                     onChange={(e) => setConfig({ ...config, ollama_base_url: e.target.value })}
                   />
+                  <span className="form-hint">Connection endpoint for your locally running Ollama instance (default port 11434).</span>
                 </div>
                 <div className="form-group">
                   <label>Ollama Model Name</label>
@@ -101,6 +113,7 @@ export function SettingsPanel({
                     onChange={(e) => setConfig({ ...config, llm_model: e.target.value })}
                     placeholder="e.g. mistral"
                   />
+                  <span className="form-hint">Name of the downloaded Ollama LLM to run (e.g. mistral, llama3, deepseek).</span>
                 </div>
               </>
             )}
@@ -128,6 +141,7 @@ export function SettingsPanel({
                       else setConfig({ ...config, gemini_api_key: val });
                     }}
                   />
+                  <span className="form-hint">Your private API authorization key. It remains encrypted and stored on your local disk.</span>
                 </div>
                 <div className="form-group">
                   <label>Model Identifier</label>
@@ -141,14 +155,20 @@ export function SettingsPanel({
                       "gemini-1.5-flash"
                     }
                   />
+                  <span className="form-hint">Target model version to call (e.g. gpt-4o, claude-3-5-sonnet-latest).</span>
                 </div>
               </>
             )}
           </section>
         </div>
         <div className="settings-footer">
-          <button type="submit" className="btn-primary" disabled={!daemonOnline}>
-            Save Settings
+          {!daemonOnline && (
+            <span style={{ fontSize: "11px", color: "var(--red)", marginRight: "auto", display: "flex", alignItems: "center", gap: "4px" }}>
+              ⚠️ SMRITI Sidecar Daemon Offline — Settings cannot be saved.
+            </span>
+          )}
+          <button type="submit" className="btn-primary" disabled={!daemonOnline} style={{ padding: "10px 24px" }}>
+            Save Configuration
           </button>
         </div>
       </form>

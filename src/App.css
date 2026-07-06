@@ -517,8 +517,9 @@ body {
 
 /* Settings Pane Styling */
 .settings-pane {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(10, 15, 28, 0.4) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 800px;
@@ -526,13 +527,14 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .settings-body {
   padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 24px;
   overflow-y: auto;
   flex: 1;
 }
@@ -540,17 +542,26 @@ body {
 .settings-section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.01);
 }
 
 .settings-section h3 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--accent);
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
+  color: #a78bfa;
+  letter-spacing: 0.8px;
+  margin-bottom: 4px;
+  border-bottom: none;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-group {
@@ -560,29 +571,39 @@ body {
 }
 
 .form-group label {
-  font-size: 12px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
   font-weight: 600;
-  color: #cbd5e1;
+  color: var(--text-muted);
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 3px;
 }
 
 .form-group select,
 .form-group input {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px;
   padding: 10px 14px;
   color: var(--text);
-  font-size: 13px;
-  height: 40px;
+  font-size: 12.5px;
+  height: 38px;
   box-sizing: border-box;
   font-family: var(--font-sans);
-  transition: all 0.2s;
+  transition: all 0.25s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .form-group select {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 14px;
@@ -592,7 +613,8 @@ body {
 .form-group select:focus,
 .form-group input:focus {
   outline: none;
-  border-color: var(--border-focus);
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 .ingest-textarea {
