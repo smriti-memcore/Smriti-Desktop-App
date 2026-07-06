@@ -182,7 +182,7 @@ function App() {
       <aside className="sidebar">
         <div className="logo-section">
           <div className="logo-icon" style={{ background: "none", boxShadow: "none" }}>
-            <img src="/src/assets/logo.png" alt="SMRITI Logo" style={{ width: "38px", height: "38px" }} />
+            <img src="/logo.png" alt="SMRITI Logo" style={{ width: "38px", height: "38px" }} />
           </div>
           <div className="logo-text">
             <h1>SMRITI</h1>
