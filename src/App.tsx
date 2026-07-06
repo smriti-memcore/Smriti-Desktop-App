@@ -181,7 +181,9 @@ function App() {
       {/* Sidebar Navigation */}
       <aside className="sidebar">
         <div className="logo-section">
-          <div className="logo-icon">🧠</div>
+          <div className="logo-icon" style={{ background: "none", boxShadow: "none" }}>
+            <img src="/src/assets/logo.png" alt="SMRITI Logo" style={{ width: "38px", height: "38px" }} />
+          </div>
           <div className="logo-text">
             <h1>SMRITI</h1>
             <span>v1.4.12 • LTM Engine</span>
