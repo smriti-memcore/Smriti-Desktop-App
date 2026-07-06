@@ -43,6 +43,9 @@ export function GraphPane({
   const zoomRef = useRef<any>(null);
   const svgSelectionRef = useRef<any>(null);
   const nodesRef = useRef<GraphNode[]>([]);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const prevGraphDataRef = useRef<string>("");
+  const isInitializedRef = useRef<boolean>(false);
 
   const handleReframe = () => {
     const nodes = nodesRef.current;
@@ -104,7 +107,22 @@ export function GraphPane({
 
   // D3 force simulation render
   useEffect(() => {
-    if (!svgRef.current || !graphData || viewMode !== "graph") return;
+    if (!svgRef.current || !graphData || viewMode !== "graph") {
+      // Clear data hash ref and initialized state on viewMode change/unmount
+      prevGraphDataRef.current = "";
+      isInitializedRef.current = false;
+      return;
+    }
+
+    // Check if graph data actually changed by comparing IDs
+    const currentDataHash = JSON.stringify({
+      rooms: graphData.rooms.map(r => r.id).sort(),
+      memories: graphData.memories.map(m => m.id).sort()
+    });
+    if (currentDataHash === prevGraphDataRef.current) {
+      return; // Skip rebuild if data is unchanged (preserves zoom/drag state)
+    }
+    prevGraphDataRef.current = currentDataHash;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove(); // Clear previous render
@@ -148,6 +166,12 @@ export function GraphPane({
       });
     });
 
+    links.forEach((l: any) => {
+      l.t = Math.random();
+      l.speed = 0.003 + Math.random() * 0.004;
+      l.is_active = false;
+    });
+
     // Setup visual container group for zoom/pan support
     const g = svg.append("g");
 
@@ -179,43 +203,59 @@ export function GraphPane({
     }
 
     // Apply auto-fit (reframe) immediately on load based on settled positions
-    const xs = nodes.map(n => n.x || 0);
-    const ys = nodes.map(n => n.y || 0);
-    if (xs.length > 0) {
-      const minX = Math.min(...xs);
-      const maxX = Math.max(...xs);
-      const minY = Math.min(...ys);
-      const maxY = Math.max(...ys);
+    if (!isInitializedRef.current) {
+      const xs = nodes.map(n => n.x || 0);
+      const ys = nodes.map(n => n.y || 0);
+      if (xs.length > 0) {
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
 
-      const pad = 40;
-      const graphWidth = (maxX - minX) + pad * 2;
-      const graphHeight = (maxY - minY) + pad * 2;
+        const pad = 40;
+        const graphWidth = (maxX - minX) + pad * 2;
+        const graphHeight = (maxY - minY) + pad * 2;
 
-      if (graphWidth > 0 && graphHeight > 0) {
-        let scale = Math.min(width / graphWidth, height / graphHeight);
-        scale = Math.min(Math.max(scale, 0.25), 1.5);
+        if (graphWidth > 0 && graphHeight > 0) {
+          let scale = Math.min(width / graphWidth, height / graphHeight);
+          scale = Math.min(Math.max(scale, 0.25), 1.5);
 
-        const midX = (minX + maxX) / 2;
-        const midY = (minY + maxY) / 2;
+          const midX = (minX + maxX) / 2;
+          const midY = (minY + maxY) / 2;
 
-        const dx = (width / 2) - scale * midX;
-        const dy = (height / 2) - scale * midY;
+          const dx = (width / 2) - scale * midX;
+          const dy = (height / 2) - scale * midY;
 
-        const transform = d3.zoomIdentity.translate(dx, dy).scale(scale);
-        svg.call(zoom.transform, transform);
+          const transform = d3.zoomIdentity.translate(dx, dy).scale(scale);
+          svg.call(zoom.transform, transform);
+        }
       }
+      isInitializedRef.current = true;
     }
 
     // Draw links
     const link = g
       .append("g")
       .attr("class", "links")
-      .selectAll("line")
+      .selectAll("path")
       .data(links)
       .enter()
-      .append("line")
+      .append("path")
       .attr("class", "link")
-      .attr("stroke", "#1e293b");
+      .attr("stroke", (d: any) => d.source.color || "var(--accent)")
+      .attr("fill", "none");
+
+    // Draw particle dots (synapses transmitting impulses)
+    const particle = g
+      .append("g")
+      .attr("class", "particles")
+      .selectAll("circle")
+      .data(links)
+      .enter()
+      .append("circle")
+      .attr("class", "particle-dot")
+      .attr("r", 2.5)
+      .attr("fill", (d: any) => d.source.color || "var(--accent)");
 
     // Draw nodes
     const node = g
@@ -225,8 +265,8 @@ export function GraphPane({
       .data(nodes)
       .enter()
       .append("circle")
-      .attr("class", "node")
-      .attr("r", (d) => d.val)
+      .attr("class", (d) => d.type === "room" ? "node room-node" : "node memory-node")
+      .attr("r", (d) => d.type === "room" ? 16 : 8)
       .attr("fill", (d) => d.color)
       .attr("stroke", "#090d16")
       .attr("stroke-width", 1.5)
@@ -238,6 +278,47 @@ export function GraphPane({
       )
       .on("click", (_, d) => {
         setSelectedNode(d);
+      })
+      .on("mouseover", (_, d) => {
+        if (!tooltipRef.current) return;
+        let content = "";
+        if (d.type === "room") {
+          content = `<strong>🏛️ Category Room</strong><br/>Topic: ${d.label}`;
+        } else {
+          const strength = d.raw?.strength ? (d.raw.strength * 100).toFixed(0) : "0";
+          const level = d.raw?.reflection_level || 0;
+          const levelNames = ["Direct", "Observation", "Insight", "Principle"];
+          const stateName = levelNames[level] || "Direct";
+          content = `<strong>🧠 Memory Node</strong><br/><p style="margin: 4px 0;">${d.raw?.content.substring(0, 100)}${d.raw?.content.length > 100 ? "..." : ""}</p><em>Strength: ${strength}%<br/>State: ${stateName} (Level ${level})</em>`;
+        }
+        tooltipRef.current.innerHTML = content;
+        tooltipRef.current.style.opacity = "1";
+
+        // Highlight active classes
+        svg.classed("has-active", true);
+        node.classed("active", (n: any) => n.id === d.id);
+        link.classed("active", (l: any) => {
+          const sId = typeof l.source === "object" ? l.source.id : l.source;
+          const tId = typeof l.target === "object" ? l.target.id : l.target;
+          const isActive = sId === d.id || tId === d.id;
+          l.is_active = isActive;
+          return isActive;
+        });
+        particle.classed("active", (l: any) => l.is_active);
+      })
+      .on("mousemove", (event) => {
+        if (!tooltipRef.current || !svgRef.current) return;
+        const container = svgRef.current.getBoundingClientRect();
+        tooltipRef.current.style.left = `${event.clientX - container.left + 14}px`;
+        tooltipRef.current.style.top = `${event.clientY - container.top + 14}px`;
+      })
+      .on("mouseout", () => {
+        if (!tooltipRef.current) return;
+        tooltipRef.current.style.opacity = "0";
+        svg.classed("has-active", false);
+        node.classed("active", false);
+        link.classed("active", false).each((l: any) => { l.is_active = false; });
+        particle.classed("active", false);
       });
 
     // Add Labels for Rooms
@@ -249,17 +330,62 @@ export function GraphPane({
       .enter()
       .append("text")
       .attr("class", "node-label")
-      .attr("dx", 12)
-      .attr("dy", 4)
-      .text((d) => d.label);
+      .attr("dx", 20)
+      .attr("dy", 5)
+      .text((d) => "🏛️ " + d.label);
 
     // Simulation Ticks
     simulation.on("tick", () => {
-      link
-        .attr("x1", (d: any) => d.source.x)
-        .attr("y1", (d: any) => d.source.y)
-        .attr("x2", (d: any) => d.target.x)
-        .attr("y2", (d: any) => d.target.y);
+      link.attr("d", (d: any) => {
+        const x1 = d.source.x;
+        const y1 = d.source.y;
+        const x2 = d.target.x;
+        const y2 = d.target.y;
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dr === 0) return `M ${x1} ${y1} L ${x2} ${y2}`;
+        
+        // Curve factor: 0.18 gives a beautiful organic curve
+        const curveFactor = 0.18;
+        const cx = (x1 + x2) / 2 - (dy / dr) * (dr * curveFactor);
+        const cy = (y1 + y2) / 2 + (dx / dr) * (dr * curveFactor);
+        
+        return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
+      });
+
+      // Update particle dot positions along the quadratic bezier curve
+      particle.each(function(d: any) {
+        const x1 = d.source.x;
+        const y1 = d.source.y;
+        const x2 = d.target.x;
+        const y2 = d.target.y;
+        
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dr === 0) {
+          d3.select(this).attr("cx", x1).attr("cy", y1);
+          return;
+        }
+        
+        const curveFactor = 0.18;
+        const cx = (x1 + x2) / 2 - (dy / dr) * (dr * curveFactor);
+        const cy = (y1 + y2) / 2 + (dx / dr) * (dr * curveFactor);
+        
+        // Advance progress t (fast when active, slow when inactive)
+        d.t = (d.t + (d.is_active ? 0.015 : d.speed)) % 1;
+        const t = d.t;
+        
+        // Compute position using Bezier equation
+        const px = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2;
+        const py = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2;
+        
+        d3.select(this).attr("cx", px).attr("cy", py);
+      });
 
       node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
 
@@ -273,16 +399,55 @@ export function GraphPane({
       d.fy = d.y;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     function dragged(event: any, d: any) {
       d.fx = event.x;
       d.fy = event.y;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     function dragended(event: any, d: any) {
       if (!event.active) simulation.alphaTarget(0);
       d.fx = null;
       d.fy = null;
     }
+
+    // Continuous particle animation loop (independent of force simulation ticks)
+    const timer = d3.timer(() => {
+      particle.each(function(d: any) {
+        const x1 = d.source.x;
+        const y1 = d.source.y;
+        const x2 = d.target.x;
+        const y2 = d.target.y;
+        if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) return;
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dr === 0) {
+          d3.select(this).attr("cx", x1).attr("cy", y1);
+          return;
+        }
+        
+        const curveFactor = 0.18;
+        const cx = (x1 + x2) / 2 - (dy / dr) * (dr * curveFactor);
+        const cy = (y1 + y2) / 2 + (dx / dr) * (dr * curveFactor);
+        
+        d.t = (d.t + (d.is_active ? 0.015 : d.speed)) % 1;
+        const t = d.t;
+        
+        const px = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2;
+        const py = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2;
+        
+        d3.select(this).attr("cx", px).attr("cy", py);
+      });
+    });
+
+    return () => {
+      simulation.stop();
+      timer.stop();
+    };
   }, [graphData, viewMode]);
 
   if (!daemonOnline) {
@@ -363,7 +528,10 @@ export function GraphPane({
             !graphData ? (
               <div className="empty-state">Loading SMRITI Memory Palace...</div>
             ) : (
-              <svg ref={svgRef} className="graph-canvas"></svg>
+              <>
+                <svg ref={svgRef} className="graph-canvas"></svg>
+                <div ref={tooltipRef} className="graph-tooltip" style={{ opacity: 0, left: 0, top: 0 }}></div>
+              </>
             )
           ) : (
             <MemoryTable 

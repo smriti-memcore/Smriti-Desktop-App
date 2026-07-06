@@ -293,6 +293,39 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                 smriti.save()
                 self._respond(200, "application/json", b'{"status": "forgotten"}')
 
+            elif self.path == "/api/pending/delete":
+                episode_id = body.get("id")
+                if not episode_id:
+                    self._respond(400, "application/json", b'{"error": "id is required"}')
+                    return
+                smriti.episode_buffer.remove(episode_id)
+                self._respond(200, "application/json", b'{"status": "deleted"}')
+
+            elif self.path == "/api/pending/edit":
+                episode_id = body.get("id")
+                content = body.get("content", "").strip()
+                if not episode_id or not content:
+                    self._respond(400, "application/json", b'{"error": "id and content are required"}')
+                    return
+                
+                with smriti.episode_buffer._lock:
+                    if episode_id in smriti.episode_buffer._episodes:
+                        smriti.episode_buffer._episodes[episode_id].content = content
+                        embedding = smriti.episode_buffer.vector_store.embed(content)
+                        smriti.episode_buffer._episodes[episode_id].embedding = embedding.tolist()
+                        smriti.episode_buffer.vector_store.add(
+                            id=f"ep:{episode_id}",
+                            vector=embedding,
+                            metadata={"type": "episode", "content": content[:200]}
+                        )
+                        smriti.episode_buffer._conn.execute(
+                            "UPDATE episodes SET content = ? WHERE id = ?", (content, episode_id)
+                        )
+                        smriti.episode_buffer._conn.commit()
+                        self._respond(200, "application/json", b'{"status": "edited"}')
+                    else:
+                        self._respond(404, "application/json", b'{"error": "Episode not found in unconsolidated queue"}')
+
             elif self.path == "/api/recall":
                 query = body.get("query", "").strip()
                 if not query:

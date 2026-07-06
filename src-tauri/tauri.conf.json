@@ -12,11 +12,24 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "SMRITI Memory Palace",
         "width": 1000,
         "height": 750,
         "resizable": true,
         "fullscreen": false
+      },
+      {
+        "label": "quick-search",
+        "title": "SMRITI Quick Search",
+        "width": 600,
+        "height": 450,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "center": true
       }
     ],
     "security": {

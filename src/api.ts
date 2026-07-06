@@ -133,4 +133,18 @@ export const smritiApi = {
       method: "POST",
     });
   },
+
+  async deleteEpisode(id: string): Promise<{ status: string }> {
+    return request<{ status: string }>("/api/pending/delete", {
+      method: "POST",
+      body: JSON.stringify({ id }),
+    });
+  },
+
+  async editEpisode(id: string, content: string): Promise<{ status: string }> {
+    return request<{ status: string }>("/api/pending/edit", {
+      method: "POST",
+      body: JSON.stringify({ id, content }),
+    });
+  },
 };

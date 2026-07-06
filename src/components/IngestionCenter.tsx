@@ -26,6 +26,9 @@ export function IngestionCenter({
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [logsExpanded, setLogsExpanded] = useState(false);
 
+  const [editingEpisode, setEditingEpisode] = useState<RawEpisode | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMemory.trim()) return;
@@ -58,6 +61,30 @@ export function IngestionCenter({
       addLog(`Consolidation failed: ${err.message}`, "consolidation");
     } finally {
       setIsConsolidating(false);
+    }
+  };
+
+  const handleDeleteEpisode = async (id: string) => {
+    addLog(`Deleting pending episode: ${id.substring(0, 8)}...`, "info");
+    try {
+      await smritiApi.deleteEpisode(id);
+      addLog("Episode deleted successfully.", "info");
+      await onIngestSuccess();
+    } catch (err: any) {
+      addLog(`Failed to delete: ${err.message}`, "info");
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEpisode) return;
+    addLog(`Editing pending episode: ${editingEpisode.id.substring(0, 8)}...`, "info");
+    try {
+      await smritiApi.editEpisode(editingEpisode.id, editingContent);
+      addLog("Episode content edited successfully.", "info");
+      setEditingEpisode(null);
+      await onIngestSuccess();
+    } catch (err: any) {
+      addLog(`Failed to edit: ${err.message}`, "info");
     }
   };
 
@@ -150,6 +177,17 @@ export function IngestionCenter({
               </button>
             </div>
             
+            {isConsolidating && (
+              <div className="consolidation-wave-container" title="System 2 is consolidating memories...">
+                <span style={{ fontSize: "11px", color: "var(--accent)", marginRight: "8px" }}>System 2 Reflecting</span>
+                <div className="consolidation-bar" style={{ animationDelay: "0.1s" }}></div>
+                <div className="consolidation-bar" style={{ animationDelay: "0.3s" }}></div>
+                <div className="consolidation-bar" style={{ animationDelay: "0.5s" }}></div>
+                <div className="consolidation-bar" style={{ animationDelay: "0.2s" }}></div>
+                <div className="consolidation-bar" style={{ animationDelay: "0.4s" }}></div>
+              </div>
+            )}
+
             <div className="queue-list">
               {pendingEpisodes.length === 0 ? (
                 <div className="empty-state" style={{ padding: "30px 10px", textAlign: "center" }}>
@@ -160,7 +198,6 @@ export function IngestionCenter({
                   let epDate = "—";
                   try {
                     if (ep.timestamp) {
-                      // Replace space with T for ISO-8601 parsing compatibility in Safari/WebKit
                       const dateStr = ep.timestamp.replace(" ", "T");
                       const parsedDate = new Date(dateStr);
                       if (!isNaN(parsedDate.getTime())) {
@@ -198,6 +235,27 @@ export function IngestionCenter({
                       >
                         {ep.content}
                       </span>
+                      
+                      <div className="queue-actions">
+                        <button 
+                          className="btn-icon" 
+                          onClick={() => {
+                            setEditingEpisode(ep);
+                            setEditingContent(ep.content);
+                          }}
+                          title="Edit observation"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="btn-icon delete" 
+                          onClick={() => handleDeleteEpisode(ep.id)}
+                          title="Delete observation"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+
                       <div 
                         style={{ 
                           display: "flex", 
@@ -262,6 +320,31 @@ export function IngestionCenter({
           </section>
         </div>
       </div>
+      
+      {/* Edit Episode Modal Overlay */}
+      {editingEpisode && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ fontSize: "14px", fontWeight: "700", borderBottom: "1px solid var(--border)", paddingBottom: "10px", marginBottom: "16px", textTransform: "uppercase", color: "var(--accent)", letterSpacing: "0.5px" }}>
+              Edit Raw Observation
+            </h3>
+            <textarea
+              value={editingContent}
+              onChange={(e) => setEditingContent(e.target.value)}
+              className="ingest-textarea"
+              style={{ width: "100%", height: "120px", background: "rgba(0,0,0,0.3)", color: "white", padding: "10px", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", resize: "none" }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+              <button className="btn-secondary" style={{ flex: "none", padding: "8px 16px" }} onClick={() => setEditingEpisode(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" style={{ flex: "none", padding: "8px 16px" }} onClick={handleSaveEdit}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

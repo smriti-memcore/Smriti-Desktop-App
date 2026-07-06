@@ -1,12 +1,25 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { smritiApi, SmritiAppConfig, PalaceGraph, RawEpisode } from "./api";
 import { GraphPane } from "./components/GraphPane";
 import { IngestionCenter } from "./components/IngestionCenter";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { QuickSearch } from "./components/QuickSearch";
 import "./App.css";
 
 function App() {
+  const [windowLabel, setWindowLabel] = useState<string>("main");
+
+  useEffect(() => {
+    try {
+      const win = getCurrentWindow();
+      setWindowLabel(win.label);
+    } catch (e) {
+      console.error("Failed to get window label, defaulting to main", e);
+    }
+  }, []);
+
   const [activeTab, setActiveTab] = useState<"graph" | "logs" | "settings">("graph");
   const [palaceViewMode, setPalaceViewMode] = useState<"graph" | "table">("graph");
   const [daemonOnline, setDaemonOnline] = useState(false);
@@ -158,6 +171,10 @@ function App() {
     const episodes = await smritiApi.getEpisodes();
     setPendingEpisodes(episodes);
   };
+
+  if (windowLabel === "quick-search") {
+    return <QuickSearch />;
+  }
 
   return (
     <div className="app-container">
