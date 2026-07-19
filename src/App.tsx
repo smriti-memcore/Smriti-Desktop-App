@@ -23,8 +23,14 @@ function App() {
   const [activeTab, setActiveTab] = useState<"graph" | "logs" | "settings">("graph");
   const [palaceViewMode, setPalaceViewMode] = useState<"graph" | "table">("graph");
   const [daemonOnline, setDaemonOnline] = useState(false);
-  const [totalMemories, setTotalMemories] = useState(0);
-  const [totalRooms, setTotalRooms] = useState(0);
+  const [totalMemories, setTotalMemories] = useState(() => {
+    const cached = localStorage.getItem("smriti_totalMemories");
+    return cached ? parseInt(cached, 10) : 0;
+  });
+  const [totalRooms, setTotalRooms] = useState(() => {
+    const cached = localStorage.getItem("smriti_totalRooms");
+    return cached ? parseInt(cached, 10) : 0;
+  });
   
   // Shared Graph & Inspector State
   const [graphData, setGraphData] = useState<PalaceGraph | null>(null);
@@ -88,6 +94,8 @@ function App() {
         setGraphData(data);
         setTotalMemories(data.stats.total_memories);
         setTotalRooms(data.stats.total_rooms);
+        localStorage.setItem("smriti_totalMemories", String(data.stats.total_memories));
+        localStorage.setItem("smriti_totalRooms", String(data.stats.total_rooms));
         
         const episodes = await smritiApi.getEpisodes();
         setPendingEpisodes(episodes);
@@ -103,7 +111,7 @@ function App() {
     };
     
     checkHealth();
-    const interval = setInterval(checkHealth, 5000);
+    const interval = setInterval(checkHealth, 60000);
     return () => clearInterval(interval);
   }, []);
 
