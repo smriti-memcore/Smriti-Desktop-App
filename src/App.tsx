@@ -46,6 +46,7 @@ function App() {
   // Logs & Stream State
   const [logs, setLogs] = useState<Array<{ time: string; text: string; type: string }>>([]);
   const [pendingEpisodes, setPendingEpisodes] = useState<RawEpisode[]>([]);
+  const [unconsolidatedCount, setUnconsolidatedCount] = useState(0);
 
   // Listen for sidecar logs forwarded from Rust
   useEffect(() => {
@@ -90,6 +91,12 @@ function App() {
         
         const episodes = await smritiApi.getEpisodes();
         setPendingEpisodes(episodes);
+
+        // Fetch full stats to get unconsolidated count from all sources
+        try {
+          const stats = await smritiApi.getStats();
+          setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
+        } catch (_) { /* stats endpoint optional */ }
       } catch (err) {
         setDaemonOnline(false);
       }
@@ -126,7 +133,7 @@ function App() {
     try {
       addLog(`Saving settings with provider: ${config.llm_provider}...`, "info");
       const res = await smritiApi.saveConfig(config);
-      if (res.status === "saved") {
+      if (res.status === "saved" || res.status === "config saved") {
         addLog("Settings updated successfully. SMRITI engine reloaded.", "info");
         alert("Settings saved successfully!");
       }
@@ -138,14 +145,26 @@ function App() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    addLog("Manual refresh triggered from Graph View...", "info");
     try {
-      const data = await smritiApi.getGraph();
+      const [data, episodes] = await Promise.all([
+        smritiApi.getGraph(),
+        smritiApi.getEpisodes(),
+      ]);
       setGraphData(data);
       setTotalMemories(data.stats.total_memories);
       setTotalRooms(data.stats.total_rooms);
+      setPendingEpisodes(episodes);
       setSelectedNode(null);
-    } catch (err) {
+      
+      try {
+        const stats = await smritiApi.getStats();
+        setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
+      } catch (_) {}
+      addLog("Refresh complete: fetched latest Semantic Palace graph and episodes.", "info");
+    } catch (err: any) {
       console.error(err);
+      addLog(`Refresh failed: ${err.message || err}`, "info");
     } finally {
       setRefreshing(false);
     }
@@ -159,6 +178,11 @@ function App() {
     
     const episodes = await smritiApi.getEpisodes();
     setPendingEpisodes(episodes);
+
+    try {
+      const stats = await smritiApi.getStats();
+      setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
+    } catch (_) {}
   };
 
   const handleConsolidateSuccess = async () => {
@@ -170,6 +194,11 @@ function App() {
     
     const episodes = await smritiApi.getEpisodes();
     setPendingEpisodes(episodes);
+
+    try {
+      const stats = await smritiApi.getStats();
+      setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
+    } catch (_) {}
   };
 
   if (windowLabel === "quick-search") {
@@ -240,6 +269,35 @@ function App() {
           </div>
         </header>
 
+        {unconsolidatedCount > 0 && (
+          <div className="consolidation-banner" style={{
+            background: "rgba(245, 158, 11, 0.08)",
+            borderBottom: "1px solid rgba(245, 158, 11, 0.25)",
+            padding: "10px 24px",
+            fontSize: "12px",
+            color: "var(--gold)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>⚡</span>
+              <span>
+                <strong>{unconsolidatedCount} new memories</strong> are in the queue for consolidation.
+                {" "}
+                <span 
+                  onClick={() => setActiveTab("logs")} 
+                  style={{ textDecoration: "underline", cursor: "pointer", fontWeight: "bold" }}
+                >
+                  Go to Ingestion Center
+                </span>
+                {" "}or run <code>smriti_consolidate</code> in your terminal.
+              </span>
+            </div>
+          </div>
+        )}
+
         {activeTab === "graph" && (
           <GraphPane 
             daemonOnline={daemonOnline}
@@ -258,6 +316,7 @@ function App() {
             daemonOnline={daemonOnline}
             logs={logs}
             pendingEpisodes={pendingEpisodes}
+            unconsolidatedCount={unconsolidatedCount}
             onIngestSuccess={handleIngestSuccess}
             onConsolidateSuccess={handleConsolidateSuccess}
             addLog={addLog}

@@ -87,13 +87,21 @@ def create_build_venv():
 def install_deps(smriti_version: str | None):
     print("── Step 2/5: Installing runtime dependencies …")
     deps = list(RUNTIME_DEPS)
-    if smriti_version:
-        # Pin the specific smriti-memcore version if requested
-        deps = [f"smriti-memcore=={smriti_version}" if d == "smriti-memcore" else d for d in deps]
-
+    
     run(
         [str(venv_python()), "-m", "pip", "install", "--upgrade", "pip"],
     )
+    
+    local_path = Path("/Users/shivtatva/HomeProjects/Memory")
+    if local_path.exists() and not smriti_version:
+        print(f"   Installing local smriti-memcore from {local_path} …")
+        deps = [d for d in deps if d != "smriti-memcore"]
+        run(
+            [str(venv_python()), "-m", "pip", "install", str(local_path)],
+        )
+    elif smriti_version:
+        deps = [f"smriti-memcore=={smriti_version}" if d == "smriti-memcore" else d for d in deps]
+
     run(
         [str(venv_python()), "-m", "pip", "install", *deps],
     )

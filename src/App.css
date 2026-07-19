@@ -1053,6 +1053,10 @@ svg.has-active .particle-dot:not(.active) {
   0% { transform: scaleY(0.15); }
   100% { transform: scaleY(1); }
 }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 /* Edit Modal Overlay */
 .modal-overlay {

@@ -191,47 +191,66 @@ export function GraphPane({
         "link",
         d3.forceLink<GraphNode, GraphLink>(links)
           .id((d) => d.id)
-          .distance(50)
+          .distance((d: any) => d.target.type === "room" || d.source.type === "room" ? 110 : 50)
       )
-      .force("charge", d3.forceManyBody().strength(-120))
+      .force("charge", d3.forceManyBody().strength(-350))
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(15));
+      .force("collision", d3.forceCollide().radius((d: any) => d.type === "room" ? 45 : 20));
 
-    // Run ticks synchronously to pre-calculate settled positions
-    for (let i = 0; i < 150; ++i) {
-      simulation.tick();
-    }
+    // Setup ResizeObserver to handle layout/dimension changes dynamically
+    const resizeObserver = new ResizeObserver((entries) => {
+      if (!entries || entries.length === 0) return;
+      const rect = entries[0].contentRect;
+      const currentWidth = rect.width;
+      const currentHeight = rect.height;
+      if (currentWidth <= 0 || currentHeight <= 0) return;
 
-    // Apply auto-fit (reframe) immediately on load based on settled positions
-    if (!isInitializedRef.current) {
-      const xs = nodes.map(n => n.x || 0);
-      const ys = nodes.map(n => n.y || 0);
-      if (xs.length > 0) {
-        const minX = Math.min(...xs);
-        const maxX = Math.max(...xs);
-        const minY = Math.min(...ys);
-        const maxY = Math.max(...ys);
+      // Update simulation's center force
+      simulation.force("center", d3.forceCenter(currentWidth / 2, currentHeight / 2));
 
-        const pad = 40;
-        const graphWidth = (maxX - minX) + pad * 2;
-        const graphHeight = (maxY - minY) + pad * 2;
-
-        if (graphWidth > 0 && graphHeight > 0) {
-          let scale = Math.min(width / graphWidth, height / graphHeight);
-          scale = Math.min(Math.max(scale, 0.25), 1.5);
-
-          const midX = (minX + maxX) / 2;
-          const midY = (minY + maxY) / 2;
-
-          const dx = (width / 2) - scale * midX;
-          const dy = (height / 2) - scale * midY;
-
-          const transform = d3.zoomIdentity.translate(dx, dy).scale(scale);
-          svg.call(zoom.transform, transform);
+      // Apply auto-fit (reframe) immediately on load based on settled positions and real size
+      if (!isInitializedRef.current) {
+        // Run ticks synchronously to pre-calculate settled positions
+        for (let i = 0; i < 150; ++i) {
+          simulation.tick();
         }
+
+        const xs = nodes.map(n => n.x || 0);
+        const ys = nodes.map(n => n.y || 0);
+        if (xs.length > 0) {
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+
+          const pad = 40;
+          const graphWidth = (maxX - minX) + pad * 2;
+          const graphHeight = (maxY - minY) + pad * 2;
+
+          if (graphWidth > 0 && graphHeight > 0) {
+            let scale = Math.min(currentWidth / graphWidth, currentHeight / graphHeight);
+            scale = Math.min(Math.max(scale, 0.25), 1.5);
+
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            const dx = (currentWidth / 2) - scale * midX;
+            const dy = (currentHeight / 2) - scale * midY;
+
+            const transform = d3.zoomIdentity.translate(dx, dy).scale(scale);
+            svg.call(zoom.transform, transform);
+          }
+        }
+        isInitializedRef.current = true;
       }
-      isInitializedRef.current = true;
+
+      simulation.alpha(0.3).restart();
+    });
+
+    if (svgRef.current) {
+      resizeObserver.observe(svgRef.current);
     }
+
 
     // Draw links
     const link = g
@@ -447,6 +466,7 @@ export function GraphPane({
     return () => {
       simulation.stop();
       timer.stop();
+      resizeObserver.disconnect();
     };
   }, [graphData, viewMode]);
 

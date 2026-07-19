@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { smritiApi, RawEpisode } from "../api";
+import React, { useState, useEffect } from "react";
+import { smritiApi, RawEpisode, SmritiStats } from "../api";
 
 interface IngestionCenterProps {
   daemonOnline: boolean;
   logs: Array<{ time: string; text: string; type: string }>;
   pendingEpisodes: RawEpisode[];
+  unconsolidatedCount: number;
   onIngestSuccess: () => Promise<void>;
   onConsolidateSuccess: () => Promise<void>;
   addLog: (text: string, type?: "info" | "consolidation") => void;
@@ -14,6 +15,7 @@ export function IngestionCenter({
   daemonOnline,
   logs,
   pendingEpisodes,
+  unconsolidatedCount,
   onIngestSuccess,
   onConsolidateSuccess,
   addLog,
@@ -25,9 +27,33 @@ export function IngestionCenter({
   const [isIngesting, setIsIngesting] = useState(false);
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [logsExpanded, setLogsExpanded] = useState(false);
+  const [stats, setStats] = useState<SmritiStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [lastStatsFetch, setLastStatsFetch] = useState<string | null>(null);
 
   const [editingEpisode, setEditingEpisode] = useState<RawEpisode | null>(null);
   const [editingContent, setEditingContent] = useState("");
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    addLog("Refreshing system stats and pending memory queue...", "info");
+    try {
+      const data = await smritiApi.getStats();
+      setStats(data);
+      setLastStatsFetch(new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+      await onIngestSuccess();
+      addLog("System stats and pending memory queue refreshed successfully.", "info");
+    } catch (err: any) {
+      addLog(`Failed to fetch stats: ${err.message}`, "info");
+    } finally {
+      setStatsLoading(false);
+    }
+  };
+
+  // Auto-fetch stats on mount
+  useEffect(() => {
+    if (daemonOnline) fetchStats();
+  }, [daemonOnline]);
 
   const handleIngest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,29 +177,99 @@ export function IngestionCenter({
 
         {/* Right Column: Pending Queue & Operations logs */}
         <div className="ingest-col">
+          {/* Stats Dashboard */}
+          <section className="pending-queue" style={{ marginBottom: "12px", padding: "14px 16px" }}>
+            <div className="queue-header" style={{ marginBottom: stats ? "12px" : "0" }}>
+              <div>
+                <h3 style={{ fontSize: "13px" }}>Engine Stats</h3>
+                {lastStatsFetch && (
+                  <span style={{ fontSize: "9px", color: "var(--text-muted)", display: "block", marginTop: "2px" }}>
+                    Last refreshed: {lastStatsFetch}
+                  </span>
+                )}
+              </div>
+              <button
+                className="btn-primary"
+                onClick={fetchStats}
+                disabled={statsLoading || !daemonOnline}
+                style={{
+                  padding: "5px 12px",
+                  fontSize: "10px",
+                  flex: "none",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px"
+                }}
+              >
+                <span style={{ 
+                  display: "inline-block", 
+                  animation: statsLoading ? "spin 1s linear infinite" : "none",
+                  fontSize: "11px"
+                }}>↻</span>
+                {statsLoading ? "Loading..." : "Refresh Stats"}
+              </button>
+            </div>
+
+            {stats && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gap: "8px"
+              }}>
+                {[
+                  { label: "Episodes", value: stats.episode_buffer?.total_episodes ?? 0, color: "#38bdf8" },
+                  { label: "Unconsolidated", value: stats.episode_buffer?.unconsolidated ?? 0, color: (stats.episode_buffer?.unconsolidated ?? 0) > 0 ? "#f59e0b" : "#4ade80" },
+                  { label: "Rooms", value: stats.palace?.room_count ?? 0, color: "#a78bfa" },
+                  { label: "Memories", value: stats.palace?.memory_count ?? 0, color: "#06b6d4" },
+                  { label: "Vectors", value: stats.vector_store?.total_vectors ?? 0, color: "#f472b6" },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: "8px",
+                    padding: "10px 8px",
+                    textAlign: "center",
+                    border: "1px solid rgba(255,255,255,0.05)"
+                  }}>
+                    <div style={{ fontSize: "18px", fontWeight: "700", color: item.color, fontVariantNumeric: "tabular-nums" }}>
+                      {item.value}
+                    </div>
+                    <div style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "3px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {item.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           {/* Pending Consolidation Queue Panel */}
           <section className="pending-queue">
             <div className="queue-header">
               <div>
                 <h3>Pending Queue ({pendingEpisodes.length})</h3>
                 <span style={{ fontSize: "10px", color: "var(--text-muted)", marginTop: "2px", display: "block" }}>
-                  System 1 raw episodes awaiting System 2 reflection
+                  {unconsolidatedCount > 0
+                    ? `${unconsolidatedCount} unconsolidated episode${unconsolidatedCount !== 1 ? "s" : ""} across all sources`
+                    : "System 1 raw episodes awaiting System 2 reflection"}
                 </span>
               </div>
               <button 
                 className="btn-primary"
                 onClick={handleConsolidate}
-                disabled={isConsolidating || !daemonOnline || pendingEpisodes.length === 0}
+                disabled={isConsolidating || !daemonOnline || unconsolidatedCount === 0}
                 style={{ 
                   padding: "6px 14px", 
                   fontSize: "11px", 
                   flex: "none",
-                  background: pendingEpisodes.length > 0 ? "var(--accent-gradient)" : "rgba(255, 255, 255, 0.03)",
-                  border: pendingEpisodes.length > 0 ? "none" : "1px solid var(--border)",
-                  color: pendingEpisodes.length > 0 ? "#fff" : "var(--text-muted)"
+                  background: unconsolidatedCount > 0 ? "var(--accent-gradient)" : "rgba(255, 255, 255, 0.03)",
+                  border: unconsolidatedCount > 0 ? "none" : "1px solid var(--border)",
+                  color: unconsolidatedCount > 0 ? "#fff" : "var(--text-muted)"
                 }}
               >
-                {isConsolidating ? "Consolidating..." : "Consolidate Queue"}
+                {isConsolidating ? "Consolidating..." : `Consolidate${unconsolidatedCount > 0 ? ` (${unconsolidatedCount})` : ""}`}
               </button>
             </div>
             

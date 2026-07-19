@@ -6,7 +6,7 @@ import traceback
 import threading
 import time
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ---------------------------------------------------------------------------
 # When running as a PyInstaller one-file bundle, all bundled packages live
@@ -92,12 +92,46 @@ def reload_smriti():
     get_smriti()
 
 
+_last_palace_mtime = 0
+
+def check_and_reload_palace():
+    global _smriti_instance, _last_palace_mtime
+    if not _smriti_instance:
+        return
+    palace_file = os.path.join(_smriti_instance.config.storage_path, "palace", "palace.json")
+    if not os.path.exists(palace_file):
+        return
+    
+    try:
+        mtime = os.path.getmtime(palace_file)
+        if _last_palace_mtime == 0:
+            _last_palace_mtime = mtime
+            return
+            
+        if mtime > _last_palace_mtime:
+            logger.info("Shared palace updated on disk by another process. Reloading state...")
+            config = load_config()
+            
+            # Preserve the warmed embedding model
+            old_model = _smriti_instance.vector_store._model
+            
+            # Recreate instance
+            new_instance = SMRITI(config)
+            new_instance.vector_store._model = old_model
+            
+            _smriti_instance = new_instance
+            _last_palace_mtime = mtime
+            logger.info(f"Palace reloaded. Count: {len(_smriti_instance.palace.memories)}")
+    except Exception as e:
+        logger.error(f"Failed to check/reload palace: {e}")
+
+
 # ── HTTP handler ───────────────────────────────────────────────────────────
 class DesktopDaemonHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):  # noqa: A002
-        """Suppress default access-log noise; use our logger instead."""
-        logger.debug(f"{self.address_string()} - {format % args}")
+        """Log request to info so it appears in the app's Operations Log."""
+        logger.info(f"{self.address_string()} - {format % args}")
 
     def _respond(self, status: int, content_type: str, body: bytes):
         self.send_response(status)
@@ -117,6 +151,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
     # ── GET routes ─────────────────────────────────────────────────────────
     def do_GET(self):  # noqa: N802
         try:
+            check_and_reload_palace()
             if self.path == "/api/health":
                 smriti = get_smriti()
                 palace = smriti.palace
@@ -186,7 +221,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
 
             elif self.path == "/api/stats":
                 smriti = get_smriti()
-                stats = smriti.get_stats()
+                stats = smriti.stats()
                 self._respond(200, "application/json", json.dumps(stats, default=str).encode())
 
             elif self.path == "/api/pending":
@@ -227,6 +262,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
     # ── POST routes ────────────────────────────────────────────────────────
     def do_POST(self):  # noqa: N802
         try:
+            check_and_reload_palace()
             content_length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(content_length) or b"{}") if content_length else {}
 
@@ -355,15 +391,29 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
 
 def monitor_parent():
     """Periodically checks if the parent Tauri process has died.
-    In Unix/macOS, when a parent dies, the child process is adopted by init (PID 1).
+    Under PyInstaller, the direct parent is the bootloader, and the grandparent is the Tauri app.
+    We track the parent/grandparent's PID and verify if it's still alive using kill(pid, 0).
     """
-    initial_ppid = os.getppid()
-    if initial_ppid == 1:
-        return  # detached start
+    if hasattr(sys, "_MEIPASS"):
+        try:
+            import subprocess
+            ppid = os.getppid()
+            output = subprocess.check_output(["ps", "-o", "ppid=", "-p", str(ppid)]).decode().strip()
+            parent_pid = int(output)
+        except Exception:
+            parent_pid = os.getppid()
+    else:
+        parent_pid = os.getppid()
+
+    if parent_pid <= 1:
+        return  # Detached or init adoption
+
     while True:
         time.sleep(1)
-        if os.getppid() == 1:
-            logger.info("Parent Tauri process terminated. Exiting sidecar to release port...")
+        try:
+            os.kill(parent_pid, 0)
+        except OSError:
+            logger.info("Parent process terminated. Exiting sidecar to release port...")
             os._exit(0)
 
 
@@ -371,13 +421,13 @@ def monitor_parent():
 def run_daemon(port: int = 7799):
     bootstrap_first_run()
     # Enable immediate port reuse to prevent "Address already in use" errors during dev restarts
-    HTTPServer.allow_reuse_address = True
+    ThreadingHTTPServer.allow_reuse_address = True
     
     # Start parent process liveness monitor thread
     monitor_thread = threading.Thread(target=monitor_parent, daemon=True)
     monitor_thread.start()
 
-    server = HTTPServer(("127.0.0.1", port), DesktopDaemonHandler)
+    server = ThreadingHTTPServer(("127.0.0.1", port), DesktopDaemonHandler)
     logger.info(f"SMRITI Desktop Daemon running at http://127.0.0.1:{port}")
     try:
         server.serve_forever()

@@ -60,22 +60,49 @@ export interface RecalledMemory {
   status: string;
 }
 
+export interface SmritiStats {
+  episode_buffer?: {
+    total_episodes: number;
+    unconsolidated: number;
+  };
+  palace?: {
+    room_count: number;
+    memory_count: number;
+    edge_count: number;
+    landmark_count: number;
+  };
+  vector_store?: {
+    total_vectors: number;
+  };
+  [key: string]: unknown;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${BASE_URL}${path}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout
+
   try {
     const res = await fetch(url, {
       ...options,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(options?.headers || {}),
       },
     });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
       throw new Error(errBody.error || `HTTP error ${res.status}`);
     }
     return (await res.json()) as T;
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === "AbortError") {
+      console.error(`API Request to ${path} timed out after 1 minute.`);
+      throw new Error("Request timed out after 1 minute.");
+    }
     console.error(`API Request to ${path} failed:`, error);
     throw error;
   }
@@ -84,6 +111,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const smritiApi = {
   async getHealth(): Promise<DaemonHealth> {
     return request<DaemonHealth>("/api/health");
+  },
+
+  async getStats(): Promise<SmritiStats> {
+    return request<SmritiStats>("/api/stats");
   },
 
   async getConfig(): Promise<SmritiAppConfig> {
