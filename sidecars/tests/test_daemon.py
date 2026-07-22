@@ -337,9 +337,9 @@ class TestPostEndpoints(unittest.TestCase):
     @patch.object(daemon, "get_smriti")
     def test_encode_returns_encoded_status(self, mock_get):
         mock = MagicMock()
+        mock.encode.return_value = "mem-new"
         mem = MagicMock()
-        mem.id = "mem-new"
-        mock.encode.return_value = mem
+        mock.palace.memories = {"mem-new": mem}
         mock_get.return_value = mock
 
         handler = make_handler("POST", "/api/encode", {"content": "Hello world"})
@@ -369,41 +369,44 @@ class TestPostEndpoints(unittest.TestCase):
     @patch.object(daemon, "get_smriti")
     def test_encode_respects_visibility_shared(self, mock_get):
         mock = MagicMock()
-        mock.encode.return_value = MagicMock(id="m1")
+        mock.encode.return_value = "m1"
+        mem = MagicMock()
+        mock.palace.memories = {"m1": mem}
         mock_get.return_value = mock
 
         handler = make_handler("POST", "/api/encode",
                                {"content": "test", "visibility": "shared"})
         handler.do_POST()
 
-        call_kwargs = mock.encode.call_args
-        self.assertEqual(call_kwargs.kwargs.get("visibility"), MockVisibility.SHARED)
+        self.assertEqual(mem.visibility, MockVisibility.SHARED)
 
     @patch.object(daemon, "get_smriti")
     def test_encode_respects_visibility_private(self, mock_get):
         mock = MagicMock()
-        mock.encode.return_value = MagicMock(id="m1")
+        mock.encode.return_value = "m1"
+        mem = MagicMock()
+        mock.palace.memories = {"m1": mem}
         mock_get.return_value = mock
 
         handler = make_handler("POST", "/api/encode",
                                {"content": "secret", "visibility": "private"})
         handler.do_POST()
 
-        call_kwargs = mock.encode.call_args
-        self.assertEqual(call_kwargs.kwargs.get("visibility"), MockVisibility.PRIVATE)
+        self.assertEqual(mem.visibility, MockVisibility.PRIVATE)
 
     @patch.object(daemon, "get_smriti")
     def test_encode_defaults_to_shared_visibility(self, mock_get):
         mock = MagicMock()
-        mock.encode.return_value = MagicMock(id="m1")
+        mock.encode.return_value = "m1"
+        mem = MagicMock()
+        mock.palace.memories = {"m1": mem}
         mock_get.return_value = mock
 
         handler = make_handler("POST", "/api/encode",
                                {"content": "no visibility field"})
         handler.do_POST()
 
-        call_kwargs = mock.encode.call_args
-        self.assertEqual(call_kwargs.kwargs.get("visibility"), MockVisibility.SHARED)
+        self.assertEqual(mem.visibility, MockVisibility.SHARED)
 
     @patch.object(daemon, "get_smriti")
     def test_consolidate_returns_success(self, mock_get):
@@ -605,7 +608,9 @@ class TestContentPreview(unittest.TestCase):
     @patch.object(daemon, "get_smriti")
     def test_short_content_not_truncated(self, mock_get):
         mock = MagicMock()
-        mock.encode.return_value = MagicMock(id="m1")
+        mock.encode.return_value = "m1"
+        mem = MagicMock()
+        mock.palace.memories = {"m1": mem}
         mock_get.return_value = mock
 
         handler = make_handler("POST", "/api/encode", {"content": "Short text"})
@@ -616,7 +621,9 @@ class TestContentPreview(unittest.TestCase):
     @patch.object(daemon, "get_smriti")
     def test_long_content_truncated_at_80_chars(self, mock_get):
         mock = MagicMock()
-        mock.encode.return_value = MagicMock(id="m1")
+        mock.encode.return_value = "m1"
+        mem = MagicMock()
+        mock.palace.memories = {"m1": mem}
         mock_get.return_value = mock
 
         long_text = "A" * 200

@@ -83,16 +83,35 @@ def get_smriti() -> SMRITI:
             f"Initializing SMRITI | storage: {config.storage_path} | model: {config.llm_model}"
         )
         _smriti_instance = SMRITI(config)
+        update_palace_mtime()
     return _smriti_instance
 
 
 def reload_smriti():
     global _smriti_instance
+    if _smriti_instance:
+        try:
+            _smriti_instance.close()
+        except Exception as e:
+            logger.error(f"Failed to cleanly close SMRITI on reload: {e}")
     _smriti_instance = None
     get_smriti()
+    update_palace_mtime()
 
 
 _last_palace_mtime = 0
+
+
+def update_palace_mtime():
+    global _last_palace_mtime, _smriti_instance
+    if _smriti_instance:
+        palace_file = os.path.join(_smriti_instance.config.storage_path, "palace", "palace.json")
+        if os.path.exists(palace_file):
+            try:
+                _last_palace_mtime = os.path.getmtime(palace_file)
+            except Exception:
+                pass
+
 
 def check_and_reload_palace():
     global _smriti_instance, _last_palace_mtime
@@ -115,6 +134,14 @@ def check_and_reload_palace():
             # Preserve the warmed embedding model
             old_model = _smriti_instance.vector_store._model
             
+            # Close the old SMRITI instance resources cleanly to release locks and handles
+            try:
+                _smriti_instance.episode_buffer.close()
+                _smriti_instance.fts_index.close()
+                _smriti_instance._closed = True
+            except Exception as e:
+                logger.error(f"Failed to close old SMRITI resources on reload: {e}")
+                
             # Recreate instance
             new_instance = SMRITI(config)
             new_instance.vector_store._model = old_model
@@ -279,16 +306,20 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                     Visibility.PRIVATE if visibility_raw == "private" else Visibility.SHARED
                 )
 
-                memory = smriti.encode(
+                memory_id = smriti.encode(
                     content=content,
                     source=MemorySource.DIRECT,
                     modality=Modality.TEXT,
-                    visibility=visibility,
                 )
+                if memory_id:
+                    mem = smriti.palace.memories.get(memory_id)
+                    if mem:
+                        mem.visibility = visibility
                 smriti.save()
+                update_palace_mtime()
 
                 result = {
-                    "id": memory.id if memory else None,
+                    "id": memory_id,
                     "status": "encoded",
                     "content_preview": content[:80] + "..." if len(content) > 80 else content,
                 }
@@ -297,6 +328,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
             elif self.path == "/api/consolidate":
                 stats = smriti.consolidate()
                 smriti.save()
+                update_palace_mtime()
                 self._respond(
                     200,
                     "application/json",
@@ -327,6 +359,7 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                     return
                 smriti.forget(memory_id)
                 smriti.save()
+                update_palace_mtime()
                 self._respond(200, "application/json", b'{"status": "forgotten"}')
 
             elif self.path == "/api/pending/delete":
@@ -414,6 +447,12 @@ def monitor_parent():
             os.kill(parent_pid, 0)
         except OSError:
             logger.info("Parent process terminated. Exiting sidecar to release port...")
+            if _smriti_instance:
+                try:
+                    logger.info("Saving and closing SMRITI cleanly on exit...")
+                    _smriti_instance.close()
+                except Exception as e:
+                    logger.error(f"Error saving/closing SMRITI on parent exit: {e}")
             os._exit(0)
 
 
