@@ -65,6 +65,14 @@ This will:
 - Auto-spawn the Python sidecar daemon on port `7799`
 - Open the SMRITI dashboard window
 
+### 4. Running Sidecar Tests
+
+To run the sidecar's automated unit tests and verify the REST API endpoints, configurations, and bootstrap routines:
+
+```bash
+python3 -m unittest sidecars/tests/test_daemon.py -v
+```
+
 ## Features
 
 ### 🏛️ Semantic Palace Explorer
