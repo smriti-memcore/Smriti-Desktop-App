@@ -65,6 +65,12 @@ This will:
 - Auto-spawn the Python sidecar daemon on port `7799`
 - Open the SMRITI dashboard window
 
+> **🍏 Note for macOS Users ("App is damaged"):**
+> Because this build is self-signed, macOS Gatekeeper may quarantine web downloads and show *"Smriti is damaged and can’t be opened"*. To remove the quarantine attribute and open the app, run this single command in Terminal:
+> ```bash
+> xattr -cr /Applications/Smriti.app
+> ```
+
 ### 4. Running Sidecar Tests
 
 To run the sidecar's automated unit tests and verify the REST API endpoints, configurations, and bootstrap routines:
