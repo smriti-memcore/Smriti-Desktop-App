@@ -26,7 +26,7 @@ export function IngestionCenter({
   const [isPrivate, setIsPrivate] = useState(false);
   const [isIngesting, setIsIngesting] = useState(false);
   const [isConsolidating, setIsConsolidating] = useState(false);
-  const [logsExpanded, setLogsExpanded] = useState(false);
+  const [logsExpanded, setLogsExpanded] = useState(true);
   const [stats, setStats] = useState<SmritiStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [lastStatsFetch, setLastStatsFetch] = useState<string | null>(null);
