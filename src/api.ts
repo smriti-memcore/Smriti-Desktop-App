@@ -60,6 +60,14 @@ export interface RecalledMemory {
   status: string;
 }
 
+export interface UpdateCheckInfo {
+  current_version: string;
+  latest_version: string;
+  has_update: boolean;
+  release_url: string;
+  release_name?: string;
+}
+
 export interface SmritiStats {
   episode_buffer?: {
     total_episodes: number;
@@ -77,10 +85,10 @@ export interface SmritiStats {
   [key: string]: unknown;
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, timeoutMs = 120000): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(url, {
@@ -100,8 +108,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === "AbortError") {
-      console.error(`API Request to ${path} timed out after 1 minute.`);
-      throw new Error("Request timed out after 1 minute.");
+      const mins = Math.round(timeoutMs / 60000);
+      console.error(`API Request to ${path} timed out after ${mins} minute(s).`);
+      throw new Error(`Request timed out after ${mins} minute(s).`);
     }
     console.error(`API Request to ${path} failed:`, error);
     throw error;
@@ -162,7 +171,7 @@ export const smritiApi = {
   async consolidate(): Promise<{ status: string; stats: string }> {
     return request<{ status: string; stats: string }>("/api/consolidate", {
       method: "POST",
-    });
+    }, 600000); // 10 minute timeout for LLM consolidation / reflection
   },
 
   async deleteEpisode(id: string): Promise<{ status: string }> {
@@ -177,5 +186,9 @@ export const smritiApi = {
       method: "POST",
       body: JSON.stringify({ id, content }),
     });
+  },
+
+  async checkUpdate(): Promise<UpdateCheckInfo> {
+    return request<UpdateCheckInfo>("/api/version-check");
   },
 };
