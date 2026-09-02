@@ -31,6 +31,77 @@ STORAGE_PATH = SMRITI_HOME / "global"
 
 _smriti_instance = None
 
+APP_VERSION = "1.0.0"
+GITHUB_RELEASES_URL = "https://api.github.com/repos/smriti-memcore/Smriti-Desktop-App/releases/latest"
+
+_version_cache = {
+    "timestamp": 0.0,
+    "data": None,
+}
+
+
+def parse_semver(ver_str: str) -> tuple:
+    """Parse version string like 'v1.0.1' or '1.0.0' into tuple of integers."""
+    clean = ver_str.strip().lstrip("vV")
+    parts = []
+    for part in clean.split("."):
+        sub = ""
+        for char in part:
+            if char.isdigit():
+                sub += char
+            else:
+                break
+        if sub:
+            parts.append(int(sub))
+    return tuple(parts)
+
+
+def fetch_version_check_info() -> dict:
+    """Fetch latest release from GitHub API with 1-hour cache and semver comparison."""
+    now = time.time()
+    if _version_cache["data"] and (now - _version_cache["timestamp"] < 3600):
+        return _version_cache["data"]
+
+    current_ver = APP_VERSION
+    result = {
+        "current_version": current_ver,
+        "latest_version": current_ver,
+        "has_update": False,
+        "release_url": "https://github.com/smriti-memcore/Smriti-Desktop-App/releases/latest",
+        "release_name": f"Smriti Desktop v{current_ver}",
+    }
+
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            GITHUB_RELEASES_URL,
+            headers={"User-Agent": "Smriti-Desktop-App-Updater/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode("utf-8"))
+                tag_name = data.get("tag_name", "").strip()
+                release_url = data.get("html_url", result["release_url"])
+                release_name = data.get("name", tag_name or f"Smriti Desktop {tag_name}")
+
+                if tag_name:
+                    latest_tuple = parse_semver(tag_name)
+                    current_tuple = parse_semver(current_ver)
+                    has_update = latest_tuple > current_tuple
+
+                    result.update({
+                        "latest_version": tag_name.lstrip("vV"),
+                        "has_update": has_update,
+                        "release_url": release_url,
+                        "release_name": release_name,
+                    })
+    except Exception as e:
+        logger.warning(f"Failed to check GitHub releases for updates: {e}")
+
+    _version_cache["timestamp"] = now
+    _version_cache["data"] = result
+    return result
+
 
 # ── First-run bootstrap ────────────────────────────────────────────────────
 def bootstrap_first_run():
@@ -278,6 +349,10 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                             config_data[key] = "••••••••"
                 self._respond(200, "application/json", json.dumps(config_data).encode())
 
+            elif self.path == "/api/version-check":
+                info = fetch_version_check_info()
+                self._respond(200, "application/json", json.dumps(info).encode())
+
             else:
                 self._respond(404, "application/json", b'{"error": "Endpoint not found"}')
 
@@ -305,11 +380,13 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
                 visibility = (
                     Visibility.PRIVATE if visibility_raw == "private" else Visibility.SHARED
                 )
+                force_encode = body.get("force", True)
 
                 memory_id = smriti.encode(
                     content=content,
                     source=MemorySource.DIRECT,
                     modality=Modality.TEXT,
+                    force=force_encode,
                 )
                 if memory_id:
                     mem = smriti.palace.memories.get(memory_id)

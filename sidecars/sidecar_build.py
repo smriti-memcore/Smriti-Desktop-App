@@ -23,6 +23,8 @@ Usage
     python3 sidecars/sidecar_build.py --smriti-version 1.4.15
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import platform

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { smritiApi, SmritiAppConfig, PalaceGraph, RawEpisode } from "./api";
+import { smritiApi, SmritiAppConfig, PalaceGraph, RawEpisode, UpdateCheckInfo } from "./api";
 import { GraphPane } from "./components/GraphPane";
 import { IngestionCenter } from "./components/IngestionCenter";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -54,6 +54,10 @@ function App() {
   const [pendingEpisodes, setPendingEpisodes] = useState<RawEpisode[]>([]);
   const [unconsolidatedCount, setUnconsolidatedCount] = useState(0);
 
+  // Update check state
+  const [updateInfo, setUpdateInfo] = useState<UpdateCheckInfo | null>(null);
+  const [dismissedUpdate, setDismissedUpdate] = useState(false);
+
   // Listen for sidecar logs forwarded from Rust
   useEffect(() => {
     const listenPromise = listen<string>("smriti-log", (event) => {
@@ -105,6 +109,14 @@ function App() {
           const stats = await smritiApi.getStats();
           setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
         } catch (_) { /* stats endpoint optional */ }
+
+        // Check for app updates
+        try {
+          const update = await smritiApi.checkUpdate();
+          if (update && update.has_update) {
+            setUpdateInfo(update);
+          }
+        } catch (_) { /* update check optional */ }
       } catch (err) {
         setDaemonOnline(false);
       }
@@ -223,7 +235,7 @@ function App() {
           </div>
           <div className="logo-text">
             <h1>SMRITI</h1>
-            <span>v1.4.12 • LTM Engine</span>
+            <span>v1.4.25 • LTM Engine</span>
           </div>
         </div>
         
@@ -276,6 +288,36 @@ function App() {
             </div>
           </div>
         </header>
+
+        {updateInfo && updateInfo.has_update && !dismissedUpdate && (
+          <div className="update-banner">
+            <div className="update-banner-content">
+              <span className="update-icon">🚀</span>
+              <div>
+                <strong style={{ color: "var(--gold)" }}>New SMRITI Desktop App Version Available ({updateInfo.latest_version})</strong>
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>
+                  A newer release (v{updateInfo.latest_version}) is published on GitHub.
+                </div>
+              </div>
+            </div>
+            <div className="update-banner-actions">
+              <a 
+                href={updateInfo.release_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="update-btn primary"
+              >
+                Download Update
+              </a>
+              <button 
+                className="update-btn secondary" 
+                onClick={() => setDismissedUpdate(true)}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
 
         {unconsolidatedCount > 0 && (
           <div className="consolidation-banner" style={{
