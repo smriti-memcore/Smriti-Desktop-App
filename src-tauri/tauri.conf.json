@@ -14,8 +14,10 @@
       {
         "label": "main",
         "title": "SMRITI Memory Palace",
-        "width": 1000,
-        "height": 750,
+        "width": 1050,
+        "height": 760,
+        "minWidth": 900,
+        "minHeight": 620,
         "resizable": true,
         "fullscreen": false
       },
