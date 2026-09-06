@@ -5,11 +5,25 @@ interface AIMeterViewProps {
   daemonOnline?: boolean;
 }
 
+const getInitialBudget = (): number => {
+  try {
+    const saved = localStorage.getItem("aimeter_daily_budget");
+    if (saved) {
+      const parsed = parseFloat(saved);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return 5.0;
+};
+
 export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonOnline }) => {
+  const [localBudget, setLocalBudget] = useState<number>(getInitialBudget);
   const [stats, setStats] = useState<AIMeterStats | null>(null);
   const [timeRange, setTimeRange] = useState<"day" | "month">("day");
   const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [newBudget, setNewBudget] = useState("5.00");
+  const [newBudget, setNewBudget] = useState<string>(() => String(getInitialBudget()));
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
 
@@ -18,7 +32,13 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
       const data = await smritiApi.getAIMeterStats(timeRange);
       setStats(data);
       if (data.daily_budget) {
+        setLocalBudget(data.daily_budget);
         setNewBudget(String(data.daily_budget));
+        try {
+          localStorage.setItem("aimeter_daily_budget", String(data.daily_budget));
+        } catch (e) {
+          // ignore
+        }
       }
     } catch (err) {
       console.error("Failed to load AIMeter statistics:", err);
@@ -38,9 +58,8 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
   };
 
   const handleOpenBudgetModal = () => {
-    if (stats?.daily_budget) {
-      setNewBudget(String(stats.daily_budget));
-    }
+    const active = stats?.daily_budget ?? localBudget;
+    setNewBudget(String(active));
     setShowBudgetModal(true);
   };
 
@@ -48,6 +67,13 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
     e.preventDefault();
     const num = parseFloat(newBudget);
     if (!isNaN(num) && num > 0) {
+      setLocalBudget(num);
+      try {
+        localStorage.setItem("aimeter_daily_budget", String(num));
+      } catch (e) {
+        // ignore
+      }
+
       // Optimistically update React state immediately so user sees the change right away
       setStats((prev) => {
         const cost = prev?.today?.cost ?? 0;
@@ -75,7 +101,13 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
       try {
         const res = await smritiApi.setDailyBudget(num);
         if (res && res.daily_budget) {
+          setLocalBudget(res.daily_budget);
           setStats((prev) => (prev ? { ...prev, daily_budget: res.daily_budget } : prev));
+          try {
+            localStorage.setItem("aimeter_daily_budget", String(res.daily_budget));
+          } catch (e) {
+            // ignore
+          }
         }
         await fetchStats();
       } catch (err) {
@@ -117,7 +149,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
   };
 
   const todayCost = stats?.today?.cost ?? 0;
-  const budget = stats?.daily_budget ?? 5.0;
+  const budget = stats?.daily_budget ?? localBudget;
   const percentage = Math.min(100, Math.round((todayCost / (budget || 1)) * 100));
 
   // Gauge stroke dash values
