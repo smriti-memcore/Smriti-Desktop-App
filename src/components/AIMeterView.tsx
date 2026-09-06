@@ -37,20 +37,76 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const handleOpenBudgetModal = () => {
+    if (stats?.daily_budget) {
+      setNewBudget(String(stats.daily_budget));
+    }
+    setShowBudgetModal(true);
+  };
+
   const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(newBudget);
     if (!isNaN(num) && num > 0) {
-      await smritiApi.setDailyBudget(num);
+      // Optimistically update React state immediately so user sees the change right away
+      setStats((prev) => {
+        const cost = prev?.today?.cost ?? 0;
+        const newPct = Math.min(100, Math.round((cost / num) * 100));
+        if (prev) {
+          return {
+            ...prev,
+            daily_budget: num,
+            budget_percentage: newPct,
+          };
+        }
+        return {
+          today: { cost: 0, input_tokens: 0, output_tokens: 0, total_tokens: 0, requests: 0 },
+          daily_budget: num,
+          budget_percentage: newPct,
+          providers: {},
+          models: [],
+          recent_logs: [],
+          trend: [],
+          config: {},
+        };
+      });
       setShowBudgetModal(false);
-      fetchStats();
+
+      try {
+        const res = await smritiApi.setDailyBudget(num);
+        if (res && res.daily_budget) {
+          setStats((prev) => (prev ? { ...prev, daily_budget: res.daily_budget } : prev));
+        }
+        await fetchStats();
+      } catch (err) {
+        console.error("Failed to save budget to daemon:", err);
+      }
     }
   };
 
   const handleResetToday = async () => {
     if (confirm("Are you sure you want to clear today's intercepted usage logs?")) {
-      await smritiApi.resetAIMeterTodayLogs();
-      fetchStats();
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              today: {
+                cost: 0,
+                input_tokens: 0,
+                output_tokens: 0,
+                total_tokens: 0,
+                requests: 0,
+              },
+              budget_percentage: 0,
+            }
+          : prev
+      );
+      try {
+        await smritiApi.resetAIMeterTodayLogs();
+        await fetchStats();
+      } catch (err) {
+        console.error("Failed to reset today logs:", err);
+      }
     }
   };
 
@@ -60,7 +116,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
     return String(num);
   };
 
-  const todayCost = stats?.today.cost ?? 0;
+  const todayCost = stats?.today?.cost ?? 0;
   const budget = stats?.daily_budget ?? 5.0;
   const percentage = Math.min(100, Math.round((todayCost / (budget || 1)) * 100));
 
@@ -110,7 +166,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
           <button type="button" className="aimeter-btn proxy-btn" onClick={() => setShowSetupGuide(!showSetupGuide)}>
             <span>⚙️</span> Setup Proxy
           </button>
-          <button type="button" className="aimeter-btn budget-btn" onClick={() => setShowBudgetModal(true)}>
+          <button type="button" className="aimeter-btn budget-btn" onClick={handleOpenBudgetModal}>
             <span>🎯</span> Set Budget
           </button>
           <button type="button" className="aimeter-btn reset-btn" onClick={handleResetToday} title="Clear today's logs">
@@ -225,14 +281,14 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
         <div className="aimeter-card">
           <div className="card-label">TOTAL TOKENS PROCESSED</div>
           <div className="kpi-big-num">
-            {formatTokens(stats?.today.total_tokens ?? 0)}
+            {formatTokens(stats?.today?.total_tokens ?? 0)}
           </div>
           <div className="token-breakdown">
             <div className="token-sub">
-              <span>Input:</span> <strong>{formatTokens(stats?.today.input_tokens ?? 0)}</strong>
+              <span>Input:</span> <strong>{formatTokens(stats?.today?.input_tokens ?? 0)}</strong>
             </div>
             <div className="token-sub">
-              <span>Output:</span> <strong>{formatTokens(stats?.today.output_tokens ?? 0)}</strong>
+              <span>Output:</span> <strong>{formatTokens(stats?.today?.output_tokens ?? 0)}</strong>
             </div>
           </div>
         </div>
@@ -240,7 +296,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
         {/* Card 3: Total Requests */}
         <div className="aimeter-card">
           <div className="card-label">TOTAL API REQUESTS</div>
-          <div className="kpi-big-num">{stats?.today.requests ?? 0}</div>
+          <div className="kpi-big-num">{stats?.today?.requests ?? 0}</div>
           <div className="provider-chips">
             {stats &&
               Object.entries(stats.providers)
