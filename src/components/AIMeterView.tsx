@@ -232,6 +232,25 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
                 </code>
               </pre>
             </div>
+
+            <div className="setup-card">
+              <div className="setup-card-header">
+                <strong>Claude Code CLI</strong>
+                <button
+                  className="copy-snippet-btn"
+                  onClick={() =>
+                    handleCopy('export ANTHROPIC_BASE_URL="http://127.0.0.1:5333/anthropic"', "claude")
+                  }
+                >
+                  {copiedKey === "claude" ? "✓ Copied" : "Copy Snippet"}
+                </button>
+              </div>
+              <pre>
+                <code>
+                  export ANTHROPIC_BASE_URL="http://127.0.0.1:5333/anthropic"
+                </code>
+              </pre>
+            </div>
           </div>
         </div>
       )}

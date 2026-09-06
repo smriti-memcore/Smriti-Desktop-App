@@ -117,16 +117,37 @@ def init_db():
     logger.info(f"AIMeter database initialized at {DB_PATH}")
 
 
+def normalize_timestamp(ts):
+    if not ts:
+        return datetime.now().isoformat()
+    if isinstance(ts, (int, float)):
+        if ts > 1e11:  # epoch milliseconds
+            ts = ts / 1000.0
+        return datetime.fromtimestamp(ts).isoformat()
+    if isinstance(ts, str):
+        if ts.isdigit():
+            val = float(ts)
+            if val > 1e11:
+                val = val / 1000.0
+            return datetime.fromtimestamp(val).isoformat()
+        try:
+            clean_ts = ts.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(clean_ts)
+            return dt.astimezone().replace(tzinfo=None).isoformat()
+        except Exception:
+            return ts
+    return datetime.now().isoformat()
+
+
 def log_usage(provider, model, input_tokens, output_tokens, cost, source, request_id, timestamp=None):
     conn = get_db()
     cursor = conn.cursor()
-    if not timestamp:
-        timestamp = datetime.now().isoformat()
+    norm_ts = normalize_timestamp(timestamp)
     try:
         cursor.execute("""
         INSERT INTO usage_logs (timestamp, provider, model, input_tokens, output_tokens, cost, source, request_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (timestamp, provider, model, input_tokens, output_tokens, cost, source, request_id))
+        """, (norm_ts, provider, model, input_tokens, output_tokens, cost, source, request_id))
         conn.commit()
         logger.info(f"[AIMeter - {source}] {model} ({input_tokens} -> {output_tokens}) Cost: ${cost:.6f}")
     except sqlite3.IntegrityError:
@@ -178,38 +199,32 @@ class PriceRegistry:
             }
 
         clean_name = model_name.lower().strip()
-
-        matched_key = None
+        # Direct lookup in fetched LiteLLM pricing
         if clean_name in self.prices:
-            matched_key = clean_name
-        else:
-            for k in self.prices.keys():
-                if k.lower() in clean_name or clean_name in k.lower():
-                    matched_key = k
-                    break
-
-        if matched_key and "input_cost_per_token" in self.prices[matched_key]:
-            entry = self.prices[matched_key]
-            input_cost = entry.get("input_cost_per_token", 0.0) * 1_000_000
-            output_cost = entry.get("output_cost_per_token", 0.0) * 1_000_000
-            cache_creation_cost = entry.get("cache_creation_input_token_cost", entry.get("input_cost_per_token", 0.0) * 1.25) * 1_000_000
-            cache_read_cost = entry.get("cache_read_input_token_cost", entry.get("input_cost_per_token", 0.0) * 0.1) * 1_000_000
+            p = self.prices[clean_name]
+            in_cost = p.get("input_cost_per_token", 0.0) * 1_000_000.0
+            out_cost = p.get("output_cost_per_token", 0.0) * 1_000_000.0
+            cache_create = p.get("cache_creation_input_token_cost", in_cost * 1.25) * 1_000_000.0
+            cache_read = p.get("cache_read_input_token_cost", in_cost * 0.1) * 1_000_000.0
             return {
-                "input": input_cost,
-                "output": output_cost,
-                "cache_creation": cache_creation_cost,
-                "cache_read": cache_read_cost,
+                "input": in_cost or 3.0,
+                "output": out_cost or 15.0,
+                "cache_creation": cache_create or 3.75,
+                "cache_read": cache_read or 0.30,
             }
 
-        for key, value in FALLBACK_PRICING.items():
+        # Fuzzy match fallback
+        for key, val in FALLBACK_PRICING.items():
             if key in clean_name:
                 return {
-                    **value,
-                    "cache_creation": value["input"] * 1.25,
-                    "cache_read": value["input"] * 0.1,
+                    "input": val["input"],
+                    "output": val["output"],
+                    "cache_creation": val.get("cache_creation", val["input"] * 1.25),
+                    "cache_read": val.get("cache_read", val["input"] * 0.1),
                 }
 
-        return {"input": 2.00, "output": 10.00, "cache_creation": 2.50, "cache_read": 0.20}
+        # Default fallback
+        return {"input": 3.00, "output": 15.00, "cache_creation": 3.75, "cache_read": 0.30}
 
 
 price_registry = PriceRegistry()
@@ -230,11 +245,17 @@ class ClaudeLogWatcher:
 
     def watch_loop(self):
         time.sleep(2)
-        claude_dir = Path("~/.claude/projects").expanduser()
+        candidate_dirs = [
+            Path("~/.claude/projects").expanduser(),
+            Path("~/.claude/sessions").expanduser(),
+            Path("~/.config/claude/projects").expanduser(),
+            Path("~/.config/claude").expanduser(),
+        ]
 
         env_dir = os.environ.get("CLAUDE_CONFIG_DIR")
         if env_dir:
-            claude_dir = Path(env_dir).expanduser() / "projects"
+            candidate_dirs.insert(0, Path(env_dir).expanduser() / "projects")
+            candidate_dirs.insert(0, Path(env_dir).expanduser())
 
         conn = get_db()
         cursor = conn.cursor()
@@ -248,14 +269,17 @@ class ClaudeLogWatcher:
 
         while self.running:
             try:
-                if claude_dir.exists():
-                    self.scan_projects(str(claude_dir))
+                for cdir in candidate_dirs:
+                    if cdir.exists():
+                        self.scan_projects(str(cdir))
             except Exception as e:
                 logger.debug(f"Error in Claude log watcher: {e}")
             time.sleep(3)
 
     def scan_projects(self, path: str):
         for root, dirs, files in os.walk(path):
+            # Avoid descending into git or node_modules directories if any
+            dirs[:] = [d for d in dirs if d not in [".git", "node_modules", "cache", "plugins"]]
             for file in files:
                 if file.endswith(".jsonl"):
                     file_path = os.path.join(root, file)
@@ -271,7 +295,7 @@ class ClaudeLogWatcher:
                 last_size = 0
 
             if curr_size > last_size:
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     f.seek(last_size)
                     new_lines = f.readlines()
                     self.file_positions[path] = f.tell()
@@ -302,17 +326,39 @@ class ClaudeLogWatcher:
 
     def parse_and_log_line(self, line_str: str, request_id: str):
         data = json.loads(line_str)
-        usage = data.get("usage")
-        if not usage:
-            msg = data.get("message", {})
-            if isinstance(msg, dict):
-                usage = msg.get("usage")
+        # Check various possible schema locations for token usage
+        usage = (
+            data.get("usage")
+            or data.get("message", {}).get("usage")
+            or data.get("event", {}).get("usage")
+            or data.get("response", {}).get("usage")
+            or data.get("stats", {})
+        )
 
         if usage and isinstance(usage, dict):
-            timestamp = data.get("timestamp")
+            timestamp = (
+                data.get("timestamp")
+                or data.get("message", {}).get("timestamp")
+                or data.get("snapshot", {}).get("timestamp")
+            )
 
-            input_tokens = usage.get("input_tokens", 0) or usage.get("prompt_tokens", 0) or usage.get("promptTokenCount", 0)
-            output_tokens = usage.get("output_tokens", 0) or usage.get("completion_tokens", 0) or usage.get("candidatesTokenCount", 0)
+            # Unique message/item ID if available
+            uid = data.get("uuid") or data.get("messageId") or data.get("id")
+            if uid:
+                request_id = f"claude_code_{uid}"
+
+            input_tokens = (
+                usage.get("input_tokens", 0)
+                or usage.get("prompt_tokens", 0)
+                or usage.get("promptTokenCount", 0)
+                or 0
+            )
+            output_tokens = (
+                usage.get("output_tokens", 0)
+                or usage.get("completion_tokens", 0)
+                or usage.get("candidatesTokenCount", 0)
+                or 0
+            )
             cache_creation_tokens = usage.get("cache_creation_input_tokens", 0) or 0
             cache_read_tokens = usage.get("cache_read_input_tokens", 0) or 0
 
@@ -324,7 +370,7 @@ class ClaudeLogWatcher:
                 data.get("model")
                 or data.get("message", {}).get("model")
                 or data.get("metadata", {}).get("model")
-                or "claude-3-5-sonnet"
+                or "claude-3-7-sonnet"
             )
 
             pricing = price_registry.get_pricing(model)
@@ -336,7 +382,7 @@ class ClaudeLogWatcher:
             ) / 1_000_000.0
 
             log_usage(
-                provider="Anthropic",
+                provider="Claude Code",
                 model=model,
                 input_tokens=total_input,
                 output_tokens=output_tokens,
