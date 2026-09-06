@@ -259,20 +259,20 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
         </div>
 
         {/* Card 4: Proxy Service Status */}
-        <div className="aimeter-card">
-          <div className="card-label">LOCAL PROXY SERVICE</div>
-          <div className="proxy-status-box">
-            <div className="status-indicator-live">
-              <span className="pulsing-dot"></span>
-              <strong>Active & Intercepting</strong>
+        <div className="aimeter-card kpi-gateway-card">
+          <div className="card-label">INTERCEPTOR GATEWAYS</div>
+          <div className="gateway-status-pill">
+            <span className="pulsing-dot"></span>
+            <span className="gateway-status-text">Active &amp; Intercepting</span>
+          </div>
+          <div className="gateway-details">
+            <div className="gateway-detail-row">
+              <span className="detail-name">Proxy Gateway</span>
+              <span className="detail-tag port-tag">:5333</span>
             </div>
-            <div className="proxy-meta">
-              <div>
-                Port: <code>:5333</code> (Proxy) &amp; <code>:7799</code>
-              </div>
-              <div>
-                Claude Watcher: <span style={{ color: "var(--success)" }}>Online</span>
-              </div>
+            <div className="gateway-detail-row">
+              <span className="detail-name">Claude Code</span>
+              <span className="detail-tag watcher-tag">⚡ Live</span>
             </div>
           </div>
         </div>

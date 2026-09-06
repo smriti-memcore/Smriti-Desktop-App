@@ -1711,29 +1711,40 @@ svg.has-active .particle-dot:not(.active) {
   border-radius: 4px;
 }
 
-/* Proxy Status Card */
-.proxy-status-box {
+/* Interceptor Gateway Card */
+.kpi-gateway-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  justify-content: space-between;
 }
 
-.status-indicator-live {
-  display: flex;
+.gateway-status-pill {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: 5px 10px;
+  border-radius: 6px;
+  width: fit-content;
+  margin: 4px 0 8px 0;
+}
+
+.gateway-status-text {
+  font-size: 11.5px;
+  font-weight: 700;
   color: #34d399;
+  letter-spacing: 0.2px;
 }
 
 .pulsing-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #34d399;
   box-shadow: 0 0 8px #34d399;
   animation: pulse 2s infinite;
+  flex-shrink: 0;
 }
 
 @keyframes pulse {
@@ -1742,20 +1753,42 @@ svg.has-active .particle-dot:not(.active) {
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
 }
 
-.proxy-meta {
-  font-size: 11px;
-  color: var(--text-muted);
+.gateway-details {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  margin-top: 2px;
 }
 
-.proxy-meta code {
+.gateway-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.detail-tag {
   font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.detail-tag.port-tag {
+  background: rgba(99, 102, 241, 0.15);
   color: #c7d2fe;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1px 4px;
-  border-radius: 3px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+}
+
+.detail-tag.watcher-tag {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 /* ── Middle Row (Trend Chart & Top Models) ────────────────────────────────── */
