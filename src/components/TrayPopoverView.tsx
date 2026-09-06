@@ -24,6 +24,14 @@ export const TrayPopoverView: React.FC<TrayPopoverViewProps> = () => {
   const [stats, setStats] = useState<AIMeterStats | null>(null);
   const [timeRange, setTimeRange] = useState<"day" | "month">("day");
   const [localBudget, setLocalBudget] = useState<number>(getInitialBudget);
+  const [memoryCount, setMemoryCount] = useState<number>(() => {
+    const cached = localStorage.getItem("smriti_totalMemories");
+    return cached ? parseInt(cached, 10) : 0;
+  });
+  const [roomCount, setRoomCount] = useState<number>(() => {
+    const cached = localStorage.getItem("smriti_totalRooms");
+    return cached ? parseInt(cached, 10) : 0;
+  });
   const [showBudgetInput, setShowBudgetInput] = useState(false);
   const [budgetVal, setBudgetVal] = useState<string>(() => String(getInitialBudget()));
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -31,18 +39,45 @@ export const TrayPopoverView: React.FC<TrayPopoverViewProps> = () => {
 
   const fetchStats = async () => {
     try {
-      const data = await smritiApi.getAIMeterStats(timeRange);
-      setStats(data);
-      if (data.daily_budget) {
-        setLocalBudget(data.daily_budget);
-        try {
-          localStorage.setItem("aimeter_daily_budget", String(data.daily_budget));
-        } catch (e) {
-          // ignore
+      const [aiData, palaceData] = await Promise.allSettled([
+        smritiApi.getAIMeterStats(timeRange),
+        smritiApi.getGraph(),
+      ]);
+
+      let cost = 0;
+      if (aiData.status === "fulfilled") {
+        const data = aiData.value;
+        setStats(data);
+        cost = data.today?.cost ?? 0;
+        if (data.daily_budget) {
+          setLocalBudget(data.daily_budget);
+          try {
+            localStorage.setItem("aimeter_daily_budget", String(data.daily_budget));
+          } catch (e) {}
         }
       }
+
+      let mems = memoryCount;
+      if (palaceData.status === "fulfilled") {
+        const graph = palaceData.value;
+        if (graph && graph.stats) {
+          mems = graph.stats.total_memories;
+          setMemoryCount(mems);
+          setRoomCount(graph.stats.total_rooms);
+          try {
+            localStorage.setItem("smriti_totalMemories", String(mems));
+            localStorage.setItem("smriti_totalRooms", String(graph.stats.total_rooms));
+          } catch (e) {}
+        }
+      }
+
+      // Update macOS top menu bar navbar title directly
+      const title = `$${cost.toFixed(2)} • ${mems} mem`;
+      try {
+        await invoke("update_tray_title", { title });
+      } catch (e) {}
     } catch (err) {
-      console.error("Failed to load AIMeter stats in tray popover:", err);
+      console.error("Failed to load stats in tray popover:", err);
     }
   };
 
@@ -255,6 +290,20 @@ export const TrayPopoverView: React.FC<TrayPopoverViewProps> = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Memory Palace Quick Status Card */}
+      <div className="tray-palace-card" onClick={handleOpenPalace}>
+        <div className="tray-palace-icon">🏛️</div>
+        <div className="tray-palace-info">
+          <div className="tray-palace-title">Memory Palace</div>
+          <div className="tray-palace-meta">
+            <strong>{memoryCount}</strong> memories in <strong>{roomCount}</strong> rooms
+          </div>
+        </div>
+        <button type="button" className="tray-palace-action-btn">
+          Explore Palace →
+        </button>
       </div>
 
       {/* KPI Counters */}

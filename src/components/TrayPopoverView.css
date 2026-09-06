@@ -271,6 +271,57 @@
   margin-top: 6px;
 }
 
+/* Palace Status Card */
+.tray-palace-card {
+  margin: 0 16px 8px 16px;
+  padding: 10px 14px;
+  background: rgba(197, 160, 89, 0.08);
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tray-palace-card:hover {
+  background: rgba(197, 160, 89, 0.16);
+  border-color: rgba(197, 160, 89, 0.4);
+  transform: translateY(-1px);
+}
+
+.tray-palace-icon {
+  font-size: 20px;
+}
+
+.tray-palace-info {
+  flex: 1;
+}
+
+.tray-palace-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tray-palace-meta {
+  font-size: 11px;
+  color: #c5a059;
+  margin-top: 1px;
+}
+
+.tray-palace-action-btn {
+  background: rgba(197, 160, 89, 0.18);
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  color: #f1f5f9;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
 /* KPI Row */
 .tray-kpi-row {
   display: grid;

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { smritiApi, SmritiAppConfig, PalaceGraph, RawEpisode, UpdateCheckInfo } from "./api";
 import { GraphPane } from "./components/GraphPane";
@@ -194,7 +195,13 @@ function App() {
 
       try {
         const aiStats = await smritiApi.getAIMeterStats("day");
-        setTodaySpend(aiStats.today?.cost || 0);
+        const spend = aiStats.today?.cost || 0;
+        setTodaySpend(spend);
+        try {
+          await invoke("update_tray_title", {
+            title: `$${spend.toFixed(2)} • ${data.stats.total_memories} mem`,
+          });
+        } catch (_) {}
       } catch (_) {}
 
       addLog("Refresh complete: fetched latest Semantic Palace graph and episodes.", "info");

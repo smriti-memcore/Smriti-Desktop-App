@@ -22,6 +22,13 @@ fn hide_tray_window(app_handle: tauri::AppHandle) {
 }
 
 #[tauri::command]
+fn update_tray_title(app_handle: tauri::AppHandle, title: String) {
+    if let Some(tray) = app_handle.tray_by_id("main-tray") {
+        let _ = tray.set_title(Some(title));
+    }
+}
+
+#[tauri::command]
 fn exit_app(app_handle: tauri::AppHandle) {
     app_handle.exit(0);
 }
@@ -51,6 +58,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             open_main_window,
             hide_tray_window,
+            update_tray_title,
             exit_app
         ])
         .on_window_event(|window, event| {
@@ -79,8 +87,9 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&open_main_i, &search_i, &quit_i])?;
 
             if let Some(icon) = app.default_window_icon() {
-                let _ = TrayIconBuilder::new()
+                let _ = TrayIconBuilder::with_id("main-tray")
                     .icon(icon.clone())
+                    .title("$0.00")
                     .tooltip("SMRITI & AIMeter")
                     .menu(&menu)
                     .show_menu_on_left_click(false)
