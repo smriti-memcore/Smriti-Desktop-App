@@ -6,6 +6,7 @@ import { GraphPane } from "./components/GraphPane";
 import { IngestionCenter } from "./components/IngestionCenter";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { QuickSearch } from "./components/QuickSearch";
+import { AIMeterView } from "./components/AIMeterView";
 import "./App.css";
 
 function App() {
@@ -20,7 +21,7 @@ function App() {
     }
   }, []);
 
-  const [activeTab, setActiveTab] = useState<"graph" | "logs" | "settings">("graph");
+  const [activeTab, setActiveTab] = useState<"graph" | "logs" | "aimeter" | "settings">("graph");
   const [palaceViewMode, setPalaceViewMode] = useState<"graph" | "table">("graph");
   const [daemonOnline, setDaemonOnline] = useState(false);
   const [totalMemories, setTotalMemories] = useState(() => {
@@ -31,6 +32,7 @@ function App() {
     const cached = localStorage.getItem("smriti_totalRooms");
     return cached ? parseInt(cached, 10) : 0;
   });
+  const [todaySpend, setTodaySpend] = useState<number>(0);
   
   // Shared Graph & Inspector State
   const [graphData, setGraphData] = useState<PalaceGraph | null>(null);
@@ -87,7 +89,7 @@ function App() {
     };
   }, []);
 
-  // Poll Daemon Health, Stats, Graph, and Pending Episodes
+  // Poll Daemon Health, Stats, Graph, Pending Episodes, and AI Usage Cost
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -110,6 +112,12 @@ function App() {
           setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
         } catch (_) { /* stats endpoint optional */ }
 
+        // Fetch AIMeter stats for header pill
+        try {
+          const aiStats = await smritiApi.getAIMeterStats("day");
+          setTodaySpend(aiStats.today?.cost || 0);
+        } catch (_) { /* aimeter stats optional */ }
+
         // Check for app updates
         try {
           const update = await smritiApi.checkUpdate();
@@ -123,7 +131,7 @@ function App() {
     };
     
     checkHealth();
-    const interval = setInterval(checkHealth, 60000);
+    const interval = setInterval(checkHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -181,6 +189,12 @@ function App() {
         const stats = await smritiApi.getStats();
         setUnconsolidatedCount(stats.episode_buffer?.unconsolidated ?? 0);
       } catch (_) {}
+
+      try {
+        const aiStats = await smritiApi.getAIMeterStats("day");
+        setTodaySpend(aiStats.today?.cost || 0);
+      } catch (_) {}
+
       addLog("Refresh complete: fetched latest Semantic Palace graph and episodes.", "info");
     } catch (err: any) {
       console.error(err);
@@ -235,7 +249,7 @@ function App() {
           </div>
           <div className="logo-text">
             <h1>SMRITI</h1>
-            <span>v1.4.25 • LTM Engine</span>
+            <span>v1.4.25 • LTM & AIMeter</span>
           </div>
         </div>
         
@@ -253,6 +267,13 @@ function App() {
           >
             <span className="nav-item-icon">📝</span>
             <span>Logs & Ingest</span>
+          </div>
+          <div 
+            className={`nav-item ${activeTab === "aimeter" ? "active" : ""}`}
+            onClick={() => setActiveTab("aimeter")}
+          >
+            <span className="nav-item-icon">📊</span>
+            <span>AI Usage & Cost</span>
           </div>
           <div 
             className={`nav-item ${activeTab === "settings" ? "active" : ""}`}
@@ -275,6 +296,7 @@ function App() {
           <h2>
             {activeTab === "graph" && "Semantic Palace Explorer"}
             {activeTab === "logs" && "Memory Stream & Ingestion"}
+            {activeTab === "aimeter" && "AI Usage & Cost Tracker"}
             {activeTab === "settings" && "System Configuration"}
           </h2>
           <div className="engine-stats">
@@ -285,6 +307,14 @@ function App() {
             <div className="stat-pill">
               <span className="stat-value">{totalMemories}</span>
               <span className="stat-label">Memories</span>
+            </div>
+            <div 
+              className="stat-pill stat-pill-interactive"
+              onClick={() => setActiveTab("aimeter")} 
+              title="Click to open AI Usage & Cost Tracker"
+            >
+              <span className="stat-value" style={{ color: "#34d399" }}>${todaySpend.toFixed(2)}</span>
+              <span className="stat-label">Today's Spend</span>
             </div>
           </div>
         </header>
@@ -371,6 +401,10 @@ function App() {
             onConsolidateSuccess={handleConsolidateSuccess}
             addLog={addLog}
           />
+        )}
+
+        {activeTab === "aimeter" && (
+          <AIMeterView daemonOnline={daemonOnline} />
         )}
 
         {activeTab === "settings" && (

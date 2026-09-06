@@ -85,6 +85,35 @@ export interface SmritiStats {
   [key: string]: unknown;
 }
 
+export interface AIMeterUsageLog {
+  id: number;
+  timestamp: string;
+  provider: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost: number;
+  source: string;
+  request_id: string;
+}
+
+export interface AIMeterStats {
+  today: {
+    cost: number;
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    requests: number;
+  };
+  daily_budget: number;
+  budget_percentage: number;
+  providers: Record<string, { cost: number; input: number; output: number; count: number }>;
+  models: Array<{ model: string; provider: string; cost: number; input_tokens: number; output_tokens: number; count: number }>;
+  recent_logs: AIMeterUsageLog[];
+  trend: Array<{ day: string; cost: number }>;
+  config: Record<string, string>;
+}
+
 async function request<T>(path: string, options?: RequestInit, timeoutMs = 120000): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const controller = new AbortController();
@@ -190,5 +219,22 @@ export const smritiApi = {
 
   async checkUpdate(): Promise<UpdateCheckInfo> {
     return request<UpdateCheckInfo>("/api/version-check");
+  },
+
+  async getAIMeterStats(range = "day"): Promise<AIMeterStats> {
+    return request<AIMeterStats>(`/api/aimeter/stats?range=${range}`);
+  },
+
+  async setDailyBudget(budget: number): Promise<{ status: string; daily_budget: number }> {
+    return request<{ status: string; daily_budget: number }>("/api/aimeter/budget", {
+      method: "POST",
+      body: JSON.stringify({ budget }),
+    });
+  },
+
+  async resetAIMeterTodayLogs(): Promise<{ status: string }> {
+    return request<{ status: string }>("/api/aimeter/reset", {
+      method: "POST",
+    });
   },
 };

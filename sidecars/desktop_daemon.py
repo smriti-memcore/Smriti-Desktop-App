@@ -21,6 +21,13 @@ if hasattr(sys, "_MEIPASS"):
 from smriti_memcore.core import SMRITI
 from smriti_memcore.models import SmritiConfig, MemorySource, Modality, Visibility
 
+try:
+    import aimeter_core
+except ImportError:
+    # If running from different directory, add sidecars to path
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    import aimeter_core
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("smriti-desktop-daemon")
 
@@ -340,6 +347,35 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
 
             elif self.path == "/api/config":
                 config_data = {}
+            elif self.path.startswith("/api/aimeter/stats"):
+                parsed = urllib.parse.urlparse(self.path)
+                qs = urllib.parse.parse_qs(parsed.query)
+                time_range = qs.get("range", ["day"])[0]
+                stats = aimeter_core.get_stats_data(time_range)
+                self._respond(200, "application/json", json.dumps(stats).encode())
+
+            elif self.path == "/api/aimeter/config":
+                conn = aimeter_core.get_db()
+                cursor = conn.cursor()
+                cursor.execute("SELECT key, value FROM config")
+                config = {r["key"]: r["value"] for r in cursor.fetchall()}
+                cursor.execute("SELECT * FROM pricing_overrides")
+                overrides = [dict(r) for r in cursor.fetchall()]
+                conn.close()
+                self._respond(200, "application/json", json.dumps({"config": config, "overrides": overrides}).encode())
+
+            elif self.path.startswith(("/openai", "/anthropic", "/gemini", "/openrouter")):
+                status, headers, body, _ = aimeter_core.handle_proxy_call("GET", self.path, dict(self.headers), b"")
+                self.send_response(status)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                for h, v in headers.items():
+                    self.send_header(h, v)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            elif self.path == "/api/config":
+                config_data = {}
                 if CONFIG_PATH.exists():
                     with open(CONFIG_PATH, "r") as f:
                         config_data = json.load(f)
@@ -366,7 +402,58 @@ class DesktopDaemonHandler(BaseHTTPRequestHandler):
         try:
             check_and_reload_palace()
             content_length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(content_length) or b"{}") if content_length else {}
+            raw_body = self.rfile.read(content_length) if content_length else b""
+            body = json.loads(raw_body.decode("utf-8") or "{}") if raw_body else {}
+
+            if self.path == "/api/aimeter/budget":
+                daily_budget = float(body.get("budget", 5.0))
+                conn = aimeter_core.get_db()
+                cursor = conn.cursor()
+                cursor.execute("INSERT OR REPLACE INTO config (key, value) VALUES ('daily_budget', ?)", (str(daily_budget),))
+                conn.commit()
+                conn.close()
+                self._respond(200, "application/json", json.dumps({"status": "ok", "daily_budget": daily_budget}).encode())
+                return
+
+            elif self.path == "/api/aimeter/pricing":
+                model = body.get("model")
+                input_cost = body.get("input_cost_per_m")
+                output_cost = body.get("output_cost_per_m")
+                conn = aimeter_core.get_db()
+                cursor = conn.cursor()
+                if model and input_cost is not None and output_cost is not None:
+                    if float(input_cost) < 0:
+                        cursor.execute("DELETE FROM pricing_overrides WHERE model = ?", (model,))
+                    else:
+                        cursor.execute(
+                            "INSERT OR REPLACE INTO pricing_overrides (model, input_cost_per_m, output_cost_per_m) VALUES (?, ?, ?)",
+                            (model, float(input_cost), float(output_cost)),
+                        )
+                    conn.commit()
+                conn.close()
+                self._respond(200, "application/json", b'{"status": "pricing updated"}')
+                return
+
+            elif self.path == "/api/aimeter/reset":
+                conn = aimeter_core.get_db()
+                cursor = conn.cursor()
+                today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                cursor.execute("DELETE FROM usage_logs WHERE timestamp >= ?", (today_start,))
+                conn.commit()
+                conn.close()
+                self._respond(200, "application/json", b'{"status": "today logs cleared"}')
+                return
+
+            elif self.path.startswith(("/openai", "/anthropic", "/gemini", "/openrouter")):
+                status, headers, resp_body, _ = aimeter_core.handle_proxy_call("POST", self.path, dict(self.headers), raw_body)
+                self.send_response(status)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                for h, v in headers.items():
+                    self.send_header(h, v)
+                self.send_header("Content-Length", str(len(resp_body)))
+                self.end_headers()
+                self.wfile.write(resp_body)
+                return
 
             smriti = get_smriti()
 
@@ -536,6 +623,16 @@ def monitor_parent():
 # ── Entry point ────────────────────────────────────────────────────────────
 def run_daemon(port: int = 7799):
     bootstrap_first_run()
+
+    # Initialize AIMeter database, Claude Code watcher, and standalone proxy on port 5333
+    try:
+        aimeter_core.init_db()
+        watcher = aimeter_core.ClaudeLogWatcher()
+        watcher.start()
+        aimeter_core.start_proxy_daemon_thread(5333)
+    except Exception as e:
+        logger.error(f"Failed to initialize AIMeter services: {e}")
+
     # Enable immediate port reuse to prevent "Address already in use" errors during dev restarts
     ThreadingHTTPServer.allow_reuse_address = True
     
