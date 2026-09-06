@@ -249,7 +249,7 @@ function App() {
           </div>
           <div className="logo-text">
             <h1>SMRITI</h1>
-            <span>v1.4.25 • LTM & AIMeter</span>
+            <span>v1.1.0 • LTM & AIMeter</span>
           </div>
         </div>
         

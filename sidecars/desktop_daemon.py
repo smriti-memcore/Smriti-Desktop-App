@@ -38,7 +38,7 @@ STORAGE_PATH = SMRITI_HOME / "global"
 
 _smriti_instance = None
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 GITHUB_RELEASES_URL = "https://api.github.com/repos/smriti-memcore/Smriti-Desktop-App/releases/latest"
 
 _version_cache = {

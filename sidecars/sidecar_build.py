@@ -145,6 +145,7 @@ def compile_binary(target_triple: str) -> Path:
         "--hidden-import", "smriti_memcore.metrics",
         "--hidden-import", "smriti_memcore.attention_gate",
         "--hidden-import", "smriti_memcore.meta_memory",
+        "--hidden-import", "aimeter_core",
         str(DAEMON_PATH),
     ]
 
