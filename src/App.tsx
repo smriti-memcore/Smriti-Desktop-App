@@ -8,6 +8,7 @@ import { IngestionCenter } from "./components/IngestionCenter";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { QuickSearch } from "./components/QuickSearch";
 import { AIMeterView } from "./components/AIMeterView";
+import { TrayPopoverView } from "./components/TrayPopoverView";
 import "./App.css";
 
 function App() {
@@ -238,6 +239,10 @@ function App() {
 
   if (windowLabel === "quick-search") {
     return <QuickSearch />;
+  }
+
+  if (windowLabel === "tray-popup") {
+    return <TrayPopoverView daemonOnline={daemonOnline} />;
   }
 
   return (

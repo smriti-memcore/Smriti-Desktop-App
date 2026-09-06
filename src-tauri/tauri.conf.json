@@ -19,7 +19,8 @@
         "minWidth": 900,
         "minHeight": 620,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "visible": false
       },
       {
         "label": "quick-search",
@@ -32,6 +33,19 @@
         "alwaysOnTop": true,
         "visible": false,
         "center": true
+      },
+      {
+        "label": "tray-popup",
+        "title": "SMRITI AIMeter",
+        "width": 440,
+        "height": 620,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "center": false
       }
     ],
     "security": {
