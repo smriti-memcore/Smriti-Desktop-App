@@ -1796,6 +1796,19 @@ svg.has-active .particle-dot:not(.active) {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
   gap: 16px;
+  flex-shrink: 0;
+}
+
+.chart-card {
+  min-height: 220px;
+  resize: vertical;
+  overflow: auto;
+}
+
+.models-card {
+  min-height: 220px;
+  resize: vertical;
+  overflow: auto;
 }
 
 .card-header-clean {
@@ -1873,6 +1886,7 @@ svg.has-active .particle-dot:not(.active) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
 }
 
 .model-row {
@@ -1943,10 +1957,15 @@ svg.has-active .particle-dot:not(.active) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 240px;
+  flex-shrink: 0;
+  resize: vertical;
+  overflow: auto;
 }
 
 .table-responsive {
-  max-height: 260px;
+  flex: 1;
+  min-height: 160px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -2041,6 +2060,8 @@ svg.has-active .particle-dot:not(.active) {
   display: flex;
   align-items: center;
   gap: 20px;
+  min-height: 120px;
+  box-sizing: border-box;
 }
 
 .empty-logs-icon {
