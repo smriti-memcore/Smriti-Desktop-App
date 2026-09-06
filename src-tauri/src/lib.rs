@@ -67,6 +67,10 @@ pub fn run() {
                     api.prevent_close();
                     let _ = window.hide();
                 }
+            } else if let tauri::WindowEvent::Focused(false) = event {
+                if window.label() == "tray-popup" {
+                    let _ = window.hide();
+                }
             }
         })
         .setup(|app| {
@@ -129,6 +133,7 @@ pub fn run() {
                                         x: x as i32,
                                         y: y as i32,
                                     }));
+                                    let _ = window.set_always_on_top(true);
                                     let _ = window.show();
                                     let _ = window.set_focus();
                                 }
