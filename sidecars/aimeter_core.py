@@ -61,15 +61,6 @@ def get_db():
 
 
 def init_db():
-    # If legacy ~/.aimeter/usage.db exists and ~/.smriti/usage.db does not, import it
-    if not DB_PATH.exists() and (LEGACY_AIMETER_DIR / "usage.db").exists():
-        try:
-            import shutil
-            shutil.copy2(str(LEGACY_AIMETER_DIR / "usage.db"), str(DB_PATH))
-            logger.info(f"Imported legacy AIMeter database from {LEGACY_AIMETER_DIR / 'usage.db'}")
-        except Exception as e:
-            logger.warning(f"Could not copy legacy AIMeter database: {e}")
-
     conn = get_db()
     cursor = conn.cursor()
 
@@ -111,6 +102,23 @@ def init_db():
 
     cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('daily_budget', '5.00')")
     cursor.execute("INSERT OR IGNORE INTO config (key, value) VALUES ('proxy_port', '5333')")
+
+    # If legacy ~/.aimeter/usage.db exists, sync any missing records
+    legacy_db = LEGACY_AIMETER_DIR / "usage.db"
+    if legacy_db.exists():
+        try:
+            legacy_conn = sqlite3.connect(str(legacy_db))
+            legacy_conn.row_factory = sqlite3.Row
+            lcur = legacy_conn.cursor()
+            lcur.execute("SELECT * FROM usage_logs")
+            for row in lcur.fetchall():
+                cursor.execute("""
+                INSERT OR IGNORE INTO usage_logs (timestamp, provider, model, input_tokens, output_tokens, cost, source, request_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (row["timestamp"], row["provider"], row["model"], row["input_tokens"], row["output_tokens"], row["cost"], row["source"], row["request_id"]))
+            legacy_conn.close()
+        except Exception as e:
+            logger.debug(f"Could not sync legacy records: {e}")
 
     conn.commit()
     conn.close()
@@ -542,6 +550,26 @@ def analyze_and_log_proxy_call(provider: str, req_bytes: bytes, resp_bytes: byte
 def get_stats_data(time_range: str = "day") -> dict:
     conn = get_db()
     cursor = conn.cursor()
+
+    # If ~/.smriti/usage.db has 0 rows, check if ~/.aimeter/usage.db has existing data and sync
+    try:
+        cursor.execute("SELECT COUNT(*) as cnt FROM usage_logs")
+        if cursor.fetchone()["cnt"] == 0 and (LEGACY_AIMETER_DIR / "usage.db").exists():
+            legacy_conn = sqlite3.connect(str(LEGACY_AIMETER_DIR / "usage.db"))
+            legacy_conn.row_factory = sqlite3.Row
+            lcur = legacy_conn.cursor()
+            lcur.execute("SELECT * FROM usage_logs")
+            for row in lcur.fetchall():
+                keys = row.keys()
+                req_id = row["request_id"] if "request_id" in keys else f"legacy_{row['id']}"
+                cursor.execute("""
+                INSERT OR IGNORE INTO usage_logs (timestamp, provider, model, input_tokens, output_tokens, cost, source, request_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (row["timestamp"], row["provider"], row["model"], row["input_tokens"], row["output_tokens"], row["cost"], row["source"], req_id))
+            conn.commit()
+            legacy_conn.close()
+    except Exception as e:
+        logger.debug(f"On-the-fly legacy sync error: {e}")
 
     now = datetime.now()
     if time_range == "month":

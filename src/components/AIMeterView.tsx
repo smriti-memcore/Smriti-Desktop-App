@@ -289,9 +289,9 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
 
       {/* Main KPI Metric Grid */}
       <div className="aimeter-kpi-grid">
-        {/* Card 1: Daily Spend Gauge */}
+        {/* Card 1: Daily/Monthly Spend Gauge */}
         <div className="aimeter-card kpi-gauge-card">
-          <div className="card-label">TODAY'S SPEND</div>
+          <div className="card-label">{timeRange === "month" ? "THIS MONTH'S SPEND" : "TODAY'S SPEND"}</div>
           <div className="gauge-wrapper">
             <div className="gauge-svg-box">
               <svg width="100" height="100" viewBox="0 0 100 100">
@@ -310,7 +310,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
               </svg>
               <div className="gauge-center-text">
                 <span className="gauge-percent">{percentage}%</span>
-                <span className="gauge-sub">of budget</span>
+                <span className="gauge-sub">{timeRange === "month" ? "of target" : "of budget"}</span>
               </div>
             </div>
 
@@ -330,7 +330,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
 
         {/* Card 2: Total Tokens */}
         <div className="aimeter-card">
-          <div className="card-label">TOTAL TOKENS PROCESSED</div>
+          <div className="card-label">{timeRange === "month" ? "MONTHLY TOKENS PROCESSED" : "TODAY'S TOKENS PROCESSED"}</div>
           <div className="kpi-big-num">
             {formatTokens(stats?.today?.total_tokens ?? 0)}
           </div>
@@ -346,7 +346,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
 
         {/* Card 3: Total Requests */}
         <div className="aimeter-card">
-          <div className="card-label">TOTAL API REQUESTS</div>
+          <div className="card-label">{timeRange === "month" ? "MONTHLY API REQUESTS" : "TODAY'S API REQUESTS"}</div>
           <div className="kpi-big-num">{stats?.today?.requests ?? 0}</div>
           <div className="provider-chips">
             {stats &&
