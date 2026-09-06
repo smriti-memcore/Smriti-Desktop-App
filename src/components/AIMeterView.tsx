@@ -92,12 +92,14 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
         <div className="aimeter-controls">
           <div className="time-range-toggle">
             <button
+              type="button"
               className={`range-btn ${timeRange === "day" ? "active" : ""}`}
               onClick={() => setTimeRange("day")}
             >
               Today
             </button>
             <button
+              type="button"
               className={`range-btn ${timeRange === "month" ? "active" : ""}`}
               onClick={() => setTimeRange("month")}
             >
@@ -105,13 +107,13 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
             </button>
           </div>
 
-          <button className="aimeter-btn secondary" onClick={() => setShowSetupGuide(!showSetupGuide)}>
+          <button type="button" className="aimeter-btn proxy-btn" onClick={() => setShowSetupGuide(!showSetupGuide)}>
             <span>⚙️</span> Setup Proxy
           </button>
-          <button className="aimeter-btn secondary" onClick={() => setShowBudgetModal(true)}>
+          <button type="button" className="aimeter-btn budget-btn" onClick={() => setShowBudgetModal(true)}>
             <span>🎯</span> Set Budget
           </button>
-          <button className="aimeter-btn secondary" onClick={handleResetToday} title="Clear today's logs">
+          <button type="button" className="aimeter-btn reset-btn" onClick={handleResetToday} title="Clear today's logs">
             <span>🗑️</span> Reset
           </button>
         </div>

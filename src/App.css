@@ -1281,7 +1281,7 @@ svg.has-active .particle-dot:not(.active) {
 }
 
 /* ==========================================================================
-   AIMeter - AI Usage & Cost Tracker Styles
+   AIMeter - AI Usage & Cost Tracker Styles (Obsidian Glass Theme)
    ========================================================================== */
 
 .aimeter-container {
@@ -1291,116 +1291,267 @@ svg.has-active .particle-dot:not(.active) {
   padding: 24px 32px;
   overflow-y: auto;
   gap: 20px;
-  background: radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-              radial-gradient(circle at 20% 80%, rgba(52, 211, 153, 0.04) 0%, transparent 50%);
+  background: radial-gradient(circle at 85% 15%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
+              radial-gradient(circle at 15% 85%, rgba(52, 211, 153, 0.05) 0%, transparent 50%);
+  box-sizing: border-box;
 }
 
-.aimeter-header {
+/* ── Top Action Bar ──────────────────────────────────────────────────────── */
+.aimeter-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
+  padding-bottom: 4px;
 }
 
-.aimeter-header-left h2 {
-  font-size: 22px;
+.aimeter-title-area h3 {
+  font-size: 20px;
   font-weight: 700;
   color: #fff;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
 }
 
 .aimeter-subtitle {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-muted);
   margin-top: 4px;
+  display: block;
 }
 
-.aimeter-header-right {
+.aimeter-controls {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.aimeter-period-selector {
-  display: flex;
-  background: rgba(15, 23, 42, 0.8);
+/* Time Range Pill Toggle */
+.time-range-toggle {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.9);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   padding: 3px;
-  gap: 2px;
+  gap: 3px;
 }
 
-.aimeter-period-btn {
+.range-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+
+.range-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.45);
+}
+
+.range-btn:hover:not(.active) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Action Buttons */
+.aimeter-btn {
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  outline: none;
+  font-family: var(--font-sans);
+}
+
+.aimeter-btn.proxy-btn {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
+}
+
+.aimeter-btn.proxy-btn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.65);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+}
+
+.aimeter-btn.budget-btn {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+
+.aimeter-btn.budget-btn:hover {
+  background: rgba(245, 158, 11, 0.24);
+  border-color: rgba(245, 158, 11, 0.65);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.aimeter-btn.reset-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.aimeter-btn.reset-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.aimeter-btn.primary {
+  background: var(--accent-gradient);
+  border: none;
+  color: #fff;
+  padding: 8px 18px;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+}
+
+.aimeter-btn.primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.aimeter-btn.secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+}
+
+.aimeter-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── Proxy Setup Drawer ─────────────────────────────────────────────────── */
+.proxy-setup-drawer {
+  background: rgba(13, 17, 30, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-md);
+  padding: 18px 22px;
+  animation: fadeInDown 0.25s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setup-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.setup-drawer-header h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.close-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.proxy-setup-drawer p {
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.setup-card {
+  background: rgba(6, 9, 19, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setup-card-header strong {
+  font-size: 12px;
+  color: #c7d2fe;
+}
+
+.copy-snippet-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 10px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 3px 8px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.aimeter-period-btn.active {
+.copy-snippet-btn:hover {
   background: var(--accent);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+  border-color: var(--accent);
 }
 
-.aimeter-period-btn:hover:not(.active) {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+.setup-card pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #93c5fd;
+  white-space: pre-wrap;
+  line-height: 1.4;
 }
 
-.aimeter-btn {
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.aimeter-btn.proxy-btn {
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  color: #c7d2fe;
-}
-
-.aimeter-btn.proxy-btn:hover {
-  background: rgba(99, 102, 241, 0.22);
-  border-color: rgba(99, 102, 241, 0.6);
-  color: #fff;
-}
-
-.aimeter-btn.budget-btn {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fde68a;
-}
-
-.aimeter-btn.budget-btn:hover {
-  background: rgba(245, 158, 11, 0.22);
-  color: #fff;
-}
-
-.aimeter-btn.reset-btn {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
-}
-
-.aimeter-btn.reset-btn:hover {
-  background: rgba(239, 68, 68, 0.18);
-  color: #fff;
-}
-
-/* KPI Cards Grid */
+/* ── KPI Metric Grid ─────────────────────────────────────────────────────── */
 .aimeter-kpi-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr 1fr;
@@ -1416,46 +1567,60 @@ svg.has-active .particle-dot:not(.active) {
   position: relative;
   overflow: hidden;
   transition: transform 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .aimeter-card:hover {
   border-color: rgba(99, 102, 241, 0.35);
 }
 
-.budget-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  background: linear-gradient(135deg, rgba(13, 17, 28, 0.85) 0%, rgba(20, 24, 40, 0.9) 100%);
+.card-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
 }
 
-.gauge-container {
+/* KPI Gauge Card */
+.kpi-gauge-card {
+  background: linear-gradient(135deg, rgba(13, 17, 28, 0.9) 0%, rgba(20, 24, 40, 0.95) 100%);
+}
+
+.gauge-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.gauge-svg-box {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 90px;
+  height: 90px;
   flex-shrink: 0;
 }
 
-.gauge-svg {
-  width: 100%;
-  height: 100%;
+.gauge-svg-box svg {
   transform: rotate(-90deg);
 }
 
 .gauge-bg {
   fill: none;
   stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 7;
+  stroke-width: 8;
 }
 
-.gauge-fill {
+.gauge-val {
   fill: none;
-  stroke-width: 7;
+  stroke-width: 8;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
 }
 
-.gauge-inner-content {
+.gauge-center-text {
   position: absolute;
   top: 0;
   left: 0;
@@ -1468,141 +1633,168 @@ svg.has-active .particle-dot:not(.active) {
   pointer-events: none;
 }
 
-.gauge-pct {
-  font-size: 15px;
+.gauge-percent {
+  font-size: 16px;
   font-weight: 800;
   font-family: var(--font-mono);
   color: #fff;
 }
 
-.gauge-label {
-  font-size: 9px;
+.gauge-sub {
+  font-size: 8.5px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: var(--text-muted);
 }
 
-.budget-details {
+.gauge-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex: 1;
+  gap: 4px;
 }
 
-.budget-details h3 {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.budget-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.budget-spent {
+.spend-amount {
   font-size: 20px;
   font-weight: 800;
   color: #fff;
   font-family: var(--font-mono);
 }
 
-.budget-limit {
-  font-size: 12px;
+.spend-budget {
+  font-size: 11.5px;
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
 
-.progress-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.5s ease, background 0.3s ease;
-}
-
-.budget-remaining {
+.spend-status {
   font-size: 11px;
-  color: var(--text-muted);
+  font-weight: 700;
+  margin-top: 2px;
 }
 
-.kpi-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.kpi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.kpi-icon {
-  font-size: 16px;
-}
-
-.kpi-value {
-  font-size: 24px;
+/* Tokens Card */
+.kpi-big-num {
+  font-size: 26px;
   font-weight: 800;
   color: #fff;
   font-family: var(--font-mono);
-  margin-top: 10px;
+  margin: 6px 0;
 }
 
-.kpi-sub {
+.token-breakdown {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   font-size: 11px;
   color: var(--text-muted);
   font-family: var(--font-mono);
-  margin-top: 6px;
 }
 
-.kpi-subtext {
+.token-sub strong {
+  color: var(--text);
+}
+
+/* Requests Card & Provider Chips */
+.provider-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.provider-chip {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Proxy Status Card */
+.proxy-status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.status-indicator-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #34d399;
+}
+
+.pulsing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+.proxy-meta {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* 2-Column Grid (Trends & Models) */
-.aimeter-grid-2col {
+.proxy-meta code {
+  font-family: var(--font-mono);
+  color: #c7d2fe;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ── Middle Row (Trend Chart & Top Models) ────────────────────────────────── */
+.aimeter-mid-grid {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
   gap: 16px;
 }
 
-.aimeter-grid-2col h3 {
+.card-header-clean {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.card-header-clean h4 {
   font-size: 14px;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 16px;
+  margin: 0;
 }
 
-.trend-chart {
+.chart-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.trend-bar-chart {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 140px;
-  padding-top: 10px;
+  height: 130px;
   gap: 10px;
+  padding-top: 10px;
 }
 
-.trend-bar-wrapper {
+.trend-bar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1611,24 +1803,17 @@ svg.has-active .particle-dot:not(.active) {
   justify-content: flex-end;
 }
 
-.trend-bar-val {
+.bar-hover-val {
   font-size: 9px;
   font-family: var(--font-mono);
   color: var(--text-muted);
   margin-bottom: 4px;
 }
 
-.trend-bar-container {
-  width: 100%;
-  max-width: 32px;
-  height: 90px;
-  display: flex;
-  align-items: flex-end;
-}
-
 .trend-bar-track {
   width: 100%;
-  height: 100%;
+  max-width: 30px;
+  height: 85px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 4px 4px 0 0;
   display: flex;
@@ -1640,20 +1825,21 @@ svg.has-active .particle-dot:not(.active) {
   width: 100%;
   background: linear-gradient(180deg, #818cf8 0%, #4f46e5 100%);
   border-radius: 4px 4px 0 0;
-  transition: height 0.5s ease;
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.trend-bar-label {
+.bar-day-label {
   font-size: 10px;
   color: var(--text-muted);
   font-family: var(--font-mono);
   margin-top: 6px;
 }
 
+/* Models List */
 .models-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .model-row {
@@ -1672,17 +1858,10 @@ svg.has-active .particle-dot:not(.active) {
   border-color: rgba(99, 102, 241, 0.3);
 }
 
-.model-info {
+.model-name-group {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.model-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
 }
 
 .model-name {
@@ -1692,17 +1871,21 @@ svg.has-active .particle-dot:not(.active) {
   font-family: var(--font-mono);
 }
 
-.model-count {
-  font-size: 10px;
+.model-provider-tag {
+  font-size: 9px;
+  text-transform: uppercase;
   color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 3px;
 }
 
-.model-stats {
+.model-cost-group {
   text-align: right;
 }
 
 .model-cost {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #34d399;
   font-family: var(--font-mono);
@@ -1714,38 +1897,23 @@ svg.has-active .particle-dot:not(.active) {
   font-family: var(--font-mono);
 }
 
-/* Recent Logs Table */
-.recent-logs-card {
+.empty-state-notice {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 24px 12px;
+  line-height: 1.5;
+}
+
+/* ── Bottom Row: Live Request Log Table ───────────────────────────────────── */
+.logs-table-card {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
-.card-header-flex {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-header-flex h3 {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.live-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  padding: 3px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.5px;
-}
-
-.aimeter-table-wrapper {
-  max-height: 280px;
+.table-responsive {
+  max-height: 260px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1754,18 +1922,18 @@ svg.has-active .particle-dot:not(.active) {
 .aimeter-logs-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11.5px;
   text-align: left;
 }
 
 .aimeter-logs-table th {
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(15, 23, 42, 0.95);
   color: var(--text-muted);
   font-weight: 600;
-  padding: 10px 14px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border);
   text-transform: uppercase;
-  font-size: 10px;
+  font-size: 9.5px;
   letter-spacing: 0.5px;
   position: sticky;
   top: 0;
@@ -1773,7 +1941,7 @@ svg.has-active .particle-dot:not(.active) {
 }
 
 .aimeter-logs-table td {
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: var(--text);
   font-family: var(--font-mono);
@@ -1784,7 +1952,22 @@ svg.has-active .particle-dot:not(.active) {
   background: rgba(255, 255, 255, 0.03);
 }
 
-.source-tag {
+.time-col {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.model-col {
+  color: #fff;
+  font-weight: 600;
+}
+
+.cost-col {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.table-badge {
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -1793,129 +1976,46 @@ svg.has-active .particle-dot:not(.active) {
   letter-spacing: 0.4px;
 }
 
-.source-tag.claude_code {
+.table-badge.provider {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.table-badge.source.claude-code {
   background: rgba(217, 119, 6, 0.15);
   color: #fbbf24;
   border: 1px solid rgba(217, 119, 6, 0.35);
 }
 
-.source-tag.proxy {
+.table-badge.source.proxy {
   background: rgba(99, 102, 241, 0.15);
   color: #a5b4fc;
   border: 1px solid rgba(99, 102, 241, 0.35);
 }
 
-.source-tag.direct {
+.table-badge.source.direct {
   background: rgba(52, 211, 153, 0.15);
   color: #6ee7b7;
   border: 1px solid rgba(52, 211, 153, 0.35);
 }
 
-.provider-badge {
+.empty-table-cell {
+  text-align: center;
   color: var(--text-muted);
-  text-transform: uppercase;
-  font-size: 10px;
+  padding: 28px 16px;
+  font-size: 11.5px;
+  font-family: var(--font-sans);
 }
 
-.cost-cell {
-  font-weight: 700;
-  color: #34d399;
-}
-
-/* Proxy Setup Drawer */
-.proxy-setup-drawer {
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(99, 102, 241, 0.35);
-  border-radius: var(--radius-md);
-  padding: 18px 22px;
-  animation: fadeInDown 0.25s ease-out;
-}
-
-.drawer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-  margin-bottom: 14px;
-}
-
-.drawer-header h3 {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-}
-
-.drawer-close {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.drawer-close:hover {
-  color: #fff;
-}
-
-.proxy-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.proxy-body p {
-  font-size: 13px;
-  color: var(--text);
-  line-height: 1.5;
-}
-
-.proxy-code-block {
-  background: rgba(6, 9, 19, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-sm);
-  padding: 12px 16px;
-  position: relative;
-}
-
-.proxy-code-block pre {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #93c5fd;
-  overflow-x: auto;
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.copy-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.copy-btn:hover {
-  background: var(--accent);
-}
-
-/* Modal Overlay */
-.aimeter-modal-overlay {
+/* ── Modal Overlay ───────────────────────────────────────────────────────── */
+.aimeter-modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1923,33 +2023,48 @@ svg.has-active .particle-dot:not(.active) {
 }
 
 .aimeter-modal {
-  background: rgba(15, 23, 42, 0.95);
+  background: rgba(15, 23, 42, 0.98);
   border: 1px solid rgba(99, 102, 241, 0.35);
   border-radius: var(--radius-md);
   padding: 24px;
-  width: 360px;
+  width: 380px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  animation: fadeInDown 0.2s ease-out;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  animation: fadeInDown 0.2s ease-out;
 }
 
-.aimeter-modal-header h3 {
-  font-size: 16px;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.modal-header h3 {
+  font-size: 15px;
   font-weight: 700;
   color: #fff;
+  margin: 0;
 }
 
-.aimeter-modal-body p {
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
   font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
+  font-weight: 600;
+  color: var(--text);
 }
 
-.aimeter-input {
+.form-group input {
   width: 100%;
-  background: rgba(6, 9, 19, 0.85);
+  background: rgba(6, 9, 19, 0.9);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
@@ -1958,50 +2073,26 @@ svg.has-active .particle-dot:not(.active) {
   color: #fff;
   font-family: var(--font-mono);
   outline: none;
+  box-sizing: border-box;
   transition: border-color 0.2s ease;
 }
 
-.aimeter-input:focus {
+.form-group input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
-.aimeter-modal-footer {
+.input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 8px;
-}
-
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: var(--text);
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.btn-primary {
-  background: var(--accent-gradient);
-  border: none;
-  color: #fff;
-  padding: 8px 18px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
-}
-
-.btn-primary:hover {
-  filter: brightness(1.15);
+  margin-top: 10px;
 }
 
 
