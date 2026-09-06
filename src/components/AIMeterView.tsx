@@ -336,25 +336,27 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
       <div className="aimeter-card logs-table-card">
         <div className="card-header-clean">
           <h4>Live Intercepted API Logs</h4>
-          <span className="chart-meta">Last 50 requests</span>
+          <span className="chart-meta">
+            {stats?.recent_logs.length ? `${stats.recent_logs.length} recent requests` : "Real-time stream"}
+          </span>
         </div>
 
-        <div className="table-responsive">
-          <table className="aimeter-logs-table">
-            <thead>
-              <tr>
-                <th>TIME</th>
-                <th>PROVIDER</th>
-                <th>MODEL</th>
-                <th>SOURCE</th>
-                <th>INPUT TOK</th>
-                <th>OUTPUT TOK</th>
-                <th>COST (USD)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats && stats.recent_logs.length > 0 ? (
-                stats.recent_logs.map((log) => {
+        {stats && stats.recent_logs.length > 0 ? (
+          <div className="table-responsive">
+            <table className="aimeter-logs-table">
+              <thead>
+                <tr>
+                  <th>TIME</th>
+                  <th>PROVIDER</th>
+                  <th>MODEL</th>
+                  <th>SOURCE</th>
+                  <th>INPUT TOK</th>
+                  <th>OUTPUT TOK</th>
+                  <th>COST (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.recent_logs.map((log) => {
                   const time = new Date(log.timestamp).toLocaleTimeString();
                   return (
                     <tr key={log.id}>
@@ -364,7 +366,7 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
                       </td>
                       <td className="model-col">{log.model}</td>
                       <td>
-                        <span className={`table-badge source ${log.source.toLowerCase().replace(" ", "-")}`}>
+                        <span className={`table-badge source ${log.source.toLowerCase().replace(/[\s_]+/g, "-")}`}>
                           {log.source}
                         </span>
                       </td>
@@ -373,17 +375,28 @@ export const AIMeterView: React.FC<AIMeterViewProps> = ({ daemonOnline: _daemonO
                       <td className="cost-col">${log.cost.toFixed(5)}</td>
                     </tr>
                   );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} className="empty-table-cell">
-                    Waiting for LLM API traffic... Start querying via Claude Code or configure Cursor proxy to inspect calls live.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-logs-banner">
+            <div className="empty-logs-icon">📡</div>
+            <div className="empty-logs-content">
+              <strong>No API requests intercepted yet today</strong>
+              <p>
+                Run any prompt with <strong>Claude Code</strong> in your terminal, or point your <strong>Cursor / VS Code / SDK</strong> base URL to <code>http://127.0.0.1:5333/openai/v1</code> to inspect token usage live.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="aimeter-btn proxy-btn"
+              onClick={() => setShowSetupGuide(true)}
+            >
+              <span>🔌</span> Setup Proxy Guide
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Set Budget Modal */}

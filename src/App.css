@@ -1288,7 +1288,7 @@ svg.has-active .particle-dot:not(.active) {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 24px 32px;
+  padding: 24px 32px 64px 32px;
   overflow-y: auto;
   gap: 20px;
   background: radial-gradient(circle at 85% 15%, rgba(99, 102, 241, 0.06) 0%, transparent 50%),
@@ -2030,6 +2030,58 @@ svg.has-active .particle-dot:not(.active) {
   background: rgba(52, 211, 153, 0.15);
   color: #6ee7b7;
   border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+/* Empty Logs Banner */
+.empty-logs-banner {
+  background: rgba(6, 9, 19, 0.6);
+  border: 1px dashed rgba(99, 102, 241, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.empty-logs-icon {
+  font-size: 28px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.empty-logs-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.empty-logs-content strong {
+  font-size: 13.5px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.empty-logs-content p {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.empty-logs-content code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #c7d2fe;
 }
 
 .empty-table-cell {
