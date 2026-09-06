@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { smritiApi, SmritiAppConfig, PalaceGraph, RawEpisode, UpdateCheckInfo } from "./api";
 import { GraphPane } from "./components/GraphPane";
 import { IngestionCenter } from "./components/IngestionCenter";
@@ -331,14 +332,19 @@ function App() {
               </div>
             </div>
             <div className="update-banner-actions">
-              <a 
-                href={updateInfo.release_url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <button 
                 className="update-btn primary"
+                onClick={async () => {
+                  try {
+                    await openUrl(updateInfo.release_url);
+                  } catch (e) {
+                    console.error("Failed to open URL via Tauri opener:", e);
+                    window.open(updateInfo.release_url, "_blank");
+                  }
+                }}
               >
                 Download Update
-              </a>
+              </button>
               <button 
                 className="update-btn secondary" 
                 onClick={() => setDismissedUpdate(true)}
